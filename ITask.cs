@@ -9,7 +9,7 @@ namespace Clockwork
     */
     public interface ITask
     {
-        TimeSpan Interval { get; }
+        Interval Interval { get; }
         public void Run();
 
         public void Catch(Exception e)

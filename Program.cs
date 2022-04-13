@@ -15,32 +15,25 @@ namespace Clockwork
         {
             Console.WriteLine(args.Length > 0 ? args[0] : "");
             
-            RegisterTasks();
-            RunTasks();
+            RegisterAndRunTasks();
         }
 
-        private static void RegisterTasks()
-        {
-            foreach (Type type in Assembly.GetExecutingAssembly().GetTypes().Where(t => typeof(ITask).IsAssignableFrom(t) && ! t.IsInterface && !t.IsAbstract))
-            {
-                tasks.Add((ITask)Activator.CreateInstance(type));
-                Console.WriteLine($"Found and registered task {type.FullName}");
-            }
-        }
-
-        private static void RunTasks()
+        private static void RegisterAndRunTasks()
         {
             List<Task> runningTasks = new List<Task>();
 
-            foreach (ITask task in tasks)
+            foreach (Type type in Assembly.GetExecutingAssembly().GetTypes().Where(t => typeof(ITask).IsAssignableFrom(t) && ! t.IsInterface && !t.IsAbstract))
             {
-                runningTasks.Add(RunTaskPeriodicAsync(task, CancellationToken.None));
+                ITask task = (ITask)Activator.CreateInstance(type);
+                Console.WriteLine($"Found and registered task {type.FullName}");
+
+                runningTasks.Add(RunTaskPeriodicAsync(task));
             }
 
             Task.WaitAll(runningTasks.ToArray());
         }
 
-        private static async Task RunTaskPeriodicAsync(ITask task, CancellationToken cancellationToken)
+        private static async Task RunTaskPeriodicAsync(ITask task)
         {
             while (true)
             {
@@ -59,7 +52,7 @@ namespace Clockwork
                     }
                 });
 
-                await Task.Delay(task.Interval, cancellationToken);
+                await Task.Delay(task.Interval.CalculateTimeToNext(DateTime.Now));
             }
         }
     }

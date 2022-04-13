@@ -4,7 +4,7 @@ namespace Clockwork
 {
     public class ExampleTask2 : ITask
     {
-        public TimeSpan Interval => TimeSpan.FromSeconds(10);
+        public Interval Interval => new Interval(TimeType.Second, 10);
 
         //Optional: you can add a constructor to do any one-time setup when the instance is created
 
