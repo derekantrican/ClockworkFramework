@@ -3,7 +3,6 @@ using System.Reflection;
 using System.Linq;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using System.Threading;
 
 namespace Clockwork
 {
@@ -22,7 +21,7 @@ namespace Clockwork
         {
             List<Task> runningTasks = new List<Task>();
 
-            foreach (Type type in Assembly.GetExecutingAssembly().GetTypes().Where(t => typeof(ITask).IsAssignableFrom(t) && ! t.IsInterface && !t.IsAbstract))
+            foreach (Type type in Assembly.GetExecutingAssembly().GetTypes().Where(t => typeof(ITask).IsAssignableFrom(t) && !t.IsInterface && !t.IsAbstract))
             {
                 ITask task = (ITask)Activator.CreateInstance(type);
                 Console.WriteLine($"Found and registered task {type.FullName}");
