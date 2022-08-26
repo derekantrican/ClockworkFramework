@@ -94,6 +94,7 @@ namespace Clockwork
 
                     return new DateTime(next.Year, next.Month, next.Day, Hour, Minute, 0) - fromDateTime;
                 case TimeType.Month:
+                    //Todo: not currently supported
                     break;
                 case TimeType.Year:
                     next = fromDateTime.AddYears(Frequency);

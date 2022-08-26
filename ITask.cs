@@ -5,7 +5,7 @@ namespace Clockwork
     /*
     Ideas:
     - Could have other methods like Setup(), Catch(Exception e), Teardown()
-
+    - Could have some helper methods that JSON serlalize/deserialize to a file like Load(obj, file) and Save(obj, file)
     */
     public interface ITask
     {
