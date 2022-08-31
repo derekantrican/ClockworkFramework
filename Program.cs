@@ -15,8 +15,8 @@ namespace Clockwork
       Tasks could even be a separate assembly that could be unloaded, updated, then re-registered. That way, 1) the git operations could be
       entirely within the C# code here (rather than batch) and 2) the "Tasks" would have a clear separation from the Clockwork framework
     - On the note of "a separate place for user-defined Tasks", the user could keep a separate repo for tasks, then in the Clockworks repo could specify something
-      like a ".env" file with the Tasks library path & an update (git pull) cadence. We would just need to figure out how to safely load the library
-      from a filepath.
+      like a ".env" file with the Tasks library path (https://codingvision.net/c-load-dll-at-runtime) & an update (git pull) cadence. We would just need to 
+      figure out how to safely load the library from a filepath.
     */
     class Program
     {
