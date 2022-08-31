@@ -56,7 +56,15 @@ namespace Clockwork
                     catch (Exception e)
                     {
                         Console.WriteLine($"[{DateTime.Now}] Task '{task}' failed");
-                        task.Catch(e);
+
+                        try
+                        {
+                            task.Catch(e);
+                        }
+                        catch (Exception caught)
+                        {
+                            Console.WriteLine($"[{DateTime.Now}] Task '{task}' catch failed: ${caught.Message}\n{caught.StackTrace}");
+                        }
                     }
                 });
 
