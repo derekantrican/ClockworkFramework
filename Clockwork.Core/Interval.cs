@@ -1,5 +1,3 @@
-using System;
-
 namespace Clockwork.Core
 {
     public enum TimeType

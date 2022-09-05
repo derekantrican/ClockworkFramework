@@ -1,5 +1,3 @@
-using System;
-
 namespace Clockwork.Core
 {
     public class ExampleTask2 : ITask
@@ -10,7 +8,7 @@ namespace Clockwork.Core
 
         public void Run()
         {
-            Console.WriteLine("ExampleTask2 is running");
+            Utilities.WriteToConsoleWithColor("ExampleTask2 is running", ConsoleColor.Yellow);
         }
     }
 }
