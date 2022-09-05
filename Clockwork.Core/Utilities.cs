@@ -38,10 +38,16 @@ namespace Clockwork.Core
             Console.ResetColor();
         }
 
-        public static string ApiRequest(string url, HttpMethod method, Dictionary<string, string> headers = null /*Todo: also need params & content*/) 
+        public static string ApiRequest(string url, HttpMethod method, Dictionary<string, string> headers = null,
+                                        Dictionary<string, string> parameters = null, HttpContent content = null) 
         {
             using (var client = new HttpClient())
             {
+                if (parameters != null)
+                {
+                    url += $"?{string.Join("&", parameters.Select(param => $"{param.Key}={Uri.EscapeDataString(param.Value)}"))}";
+                }
+
                 var request = new HttpRequestMessage(method, url);
                 if (headers != null)
                 {
@@ -50,6 +56,8 @@ namespace Clockwork.Core
                         request.Headers.Add(header.Key, header.Value);
                     }
                 }
+
+                request.Content = content;
 
                 var response = client.Send(request);
                 using (var stream = response.Content.ReadAsStream())
