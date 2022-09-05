@@ -1,6 +1,6 @@
 using System;
 
-namespace Clockwork
+namespace Clockwork.Core
 {
     public enum TimeType
     {
