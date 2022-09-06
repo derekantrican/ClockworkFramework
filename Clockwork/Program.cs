@@ -30,7 +30,10 @@ namespace Clockwork
         {
             List<Task> runningTasks = new List<Task>();
 
-            foreach (Type type in Assembly.GetExecutingAssembly().GetTypes().Where(t => typeof(ITask).IsAssignableFrom(t) && !t.IsInterface && !t.IsAbstract))
+            //Todo: add ability to load tasks from a separate directory and - if not found - announce something like "No Tasks found, running
+            //in demo mode" and run the Example tasks (ie make sure Example tasks aren't run with user-specified tasks)
+            IEnumerable<Type> foundTasks = Assembly.GetExecutingAssembly().GetTypes().Where(t => typeof(ITask).IsAssignableFrom(t) && !t.IsInterface && !t.IsAbstract);
+            foreach (Type type in foundTasks)
             {
                 ITask task = (ITask)Activator.CreateInstance(type);
                 Console.WriteLine($"Found and registered task {type.FullName}");

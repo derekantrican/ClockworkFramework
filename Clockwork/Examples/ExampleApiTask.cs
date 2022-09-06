@@ -4,7 +4,7 @@ namespace Clockwork
 {
     public class ExampleApiTask : ITask
     {
-        public Interval Interval => new Interval(TimeType.Second, 30);
+        public Interval Interval => new Interval(TimeType.Year, 1);
 
         public void Run()
         {
