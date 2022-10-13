@@ -57,7 +57,7 @@ namespace Clockwork
             {
                 Utilities.WriteToConsoleWithColor($"No external tasks loaded. Loading internal example tasks instead.", ConsoleColor.Yellow);
                 Assembly currentAssembly = Assembly.GetExecutingAssembly();
-                IEnumerable<Type> exampleTasks = GetTasksFromAssembly(currentAssembly);
+                IEnumerable<Type> exampleTasks = GetTasksFromAssembly(currentAssembly).Where(t => t.Namespace == "Clockwork.Examples");
                 tasks.AddRange(exampleTasks);
             }
 

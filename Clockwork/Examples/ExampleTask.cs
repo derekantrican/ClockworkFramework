@@ -1,6 +1,6 @@
 using Clockwork.Core;
 
-namespace Clockwork
+namespace Clockwork.Examples
 {
     public class ExampleTask : ITask
     {
