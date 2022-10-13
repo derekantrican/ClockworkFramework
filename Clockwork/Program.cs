@@ -49,18 +49,37 @@ namespace Clockwork
 
         private static IEnumerable<Type> LoadLibraryTasks(string libraryLocation)
         {
-            string libraryName = new DirectoryInfo(libraryLocation).Name;
-            string binLocation = Path.Combine(libraryLocation, "bin");
-            Console.WriteLine($"Loading library {libraryName}");
-            
-            string[] csprojs = Directory.GetFiles(libraryLocation, "*.csproj");
-            if (csprojs.Length < 1)
+            if (libraryLocation.EndsWith(".dll"))
             {
-                Utilities.WriteToConsoleWithColor($"No .csproj found at location {libraryLocation} . Please make sure you are specifying the immediate parent folder to a .csproj", ConsoleColor.Red);
-                return Enumerable.Empty<Type>();
+                return LoadTasksFromDll(libraryLocation);
             }
+            else if (libraryLocation.EndsWith(".csproj"))
+            {
+                return BuildCsprojAndLoadTasksFromBin(libraryLocation);
+            }
+            else //Assume library is a folder
+            {
+                string libraryName = new DirectoryInfo(libraryLocation).Name;
+                string binLocation = Path.Combine(libraryLocation, "bin");
+                Console.WriteLine($"Loading library {libraryName}");
+                
+                string[] csprojs = Directory.GetFiles(libraryLocation, "*.csproj");
+                if (csprojs.Length < 1)
+                {
+                    Utilities.WriteToConsoleWithColor($"No .csproj found at location {libraryLocation} . Please make sure you are specifying the immediate parent folder to a .csproj", ConsoleColor.Red);
+                    return Enumerable.Empty<Type>();
+                }
 
-            string csproj = csprojs[0];
+                return BuildCsprojAndLoadTasksFromBin(csprojs[0]);
+            }
+        }
+
+        private static IEnumerable<Type> BuildCsprojAndLoadTasksFromBin(string csprojPath)
+        {
+            string libraryLocation = new FileInfo(csprojPath).DirectoryName;
+            string binLocation = Path.Combine(libraryLocation, "bin");
+            string libraryName = Path.GetFileNameWithoutExtension(csprojPath);
+
             if (!Directory.Exists(binLocation))
             {
                 var result = Utilities.RunProcess("dotnet build", libraryLocation);
@@ -83,7 +102,13 @@ namespace Clockwork
                 return Enumerable.Empty<Type>();
             }
 
-            var asm = Assembly.LoadFile(dlls[0]);
+            return LoadTasksFromDll(dlls[0]);
+        }
+
+        private static IEnumerable<Type> LoadTasksFromDll(string dllPath)
+        {
+            string libraryName = Path.GetFileNameWithoutExtension(dllPath);
+            Assembly asm = Assembly.LoadFile(dllPath);
             IEnumerable<Type> tasksInDll = asm.GetTypes().Where(t => typeof(ITask).IsAssignableFrom(t) && !t.IsInterface && !t.IsAbstract);
 
             if (!tasksInDll.Any())
