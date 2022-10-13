@@ -1,3 +1,5 @@
+using System.Diagnostics;
+using System.Text;
 using Newtonsoft.Json;
 
 namespace Clockwork.Core
@@ -69,6 +71,71 @@ namespace Clockwork.Core
                     }
                 }
             }
+        }
+
+        public class ProcessResult
+        {
+            public string StdOut { get; set; }
+            public string StdErr { get; set; }
+            public int ExitCode { get; set; }
+        }
+
+        public static ProcessResult RunProcess(string process, string location = null)
+        {
+            StringBuilder stdOutStringBuilder = new StringBuilder();
+            StringBuilder stdErrStringBuilder = new StringBuilder();
+
+            object stdOutSyncLock = new object();
+            object stdErrSyncLock = new object();
+
+            Process p = new Process
+            {
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = "cmd.exe",
+                    Arguments = $"/c {process}",
+                    WorkingDirectory = location,
+                    RedirectStandardError = true,
+                    RedirectStandardOutput = true,
+                    UseShellExecute = false
+                },
+            };
+
+            p.OutputDataReceived += (sender, args) =>
+            {
+                if (args.Data != null)
+                {
+                    lock (stdOutSyncLock)
+                    {
+                        stdOutStringBuilder.AppendLine(args.Data);
+                    }
+                }
+            };
+
+            p.ErrorDataReceived += (sender, args) =>
+            {
+                if (args.Data != null)
+                {
+                    lock (stdErrSyncLock)
+                    {
+                        stdErrStringBuilder.AppendLine(args.Data);
+                    }
+                }
+            };
+
+            p.Start();
+
+            p.BeginOutputReadLine();
+            p.BeginErrorReadLine();
+
+            p.WaitForExit();
+
+            return new ProcessResult
+            {
+                StdOut = stdOutStringBuilder.ToString(),
+                StdErr = stdErrStringBuilder.ToString(),
+                ExitCode = p.ExitCode,
+            };
         }
     }
 }

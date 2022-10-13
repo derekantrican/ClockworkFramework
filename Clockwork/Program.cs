@@ -27,15 +27,12 @@ namespace Clockwork
         {
             List<Task> runningTasks = new List<Task>();
 
-            //Todo: add ability to load tasks from a separate directory and - if not found - announce something like "No Tasks found, running
-            //in demo mode" and run the Example tasks (ie make sure Example tasks aren't run with user-specified tasks)
-
-            IEnumerable<Type> tasks = LoadLibraryTasks();
+            IEnumerable<Type> tasks = LoadLibraryTasks(Path.GetFullPath(@"..\..\ClockworkTasks")); //Todo: load library paths from file
             if (!tasks.Any())
             {
                 Utilities.WriteToConsoleWithColor($"No external tasks loaded. Loading internal example tasks instead.", ConsoleColor.Yellow);
                 Assembly currentAssembly = Assembly.GetExecutingAssembly();
-                IEnumerable<Type> exampleTasks = currentAssembly.GetTypes().Where(t => typeof(ITask).IsAssignableFrom(t) && !t.IsInterface && !t.IsAbstract);
+                IEnumerable<Type> exampleTasks = GetTasksFromAssembly(currentAssembly);
                 tasks = exampleTasks;
             }
 
@@ -50,18 +47,56 @@ namespace Clockwork
             Task.WaitAll(runningTasks.ToArray());
         }
 
-        private static IEnumerable<Type> LoadLibraryTasks()
+        private static IEnumerable<Type> LoadLibraryTasks(string libraryLocation)
         {
-            string dllLocation = Path.GetFullPath(@"..\..\ClockworkTasks\bin\Debug\net6.0\ClockworkTasks.dll"); //Todo: in the future, should use the csproj/folder location
-            var asm = Assembly.LoadFile(dllLocation);
+            string libraryName = new DirectoryInfo(libraryLocation).Name;
+            string binLocation = Path.Combine(libraryLocation, "bin");
+            Console.WriteLine($"Loading library {libraryName}");
+            
+            string[] csprojs = Directory.GetFiles(libraryLocation, "*.csproj");
+            if (csprojs.Length < 1)
+            {
+                Utilities.WriteToConsoleWithColor($"No .csproj found at location {libraryLocation} . Please make sure you are specifying the immediate parent folder to a .csproj", ConsoleColor.Red);
+                return Enumerable.Empty<Type>();
+            }
+
+            string csproj = csprojs[0];
+            if (!Directory.Exists(binLocation))
+            {
+                var result = Utilities.RunProcess("dotnet build", libraryLocation);
+                if (result.ExitCode != 0)
+                {
+                    Utilities.WriteToConsoleWithColor($"Build of library was unsuccessful. Log output below.\n\n{result.StdOut}\n\n{result.StdErr}", ConsoleColor.Red);
+                    return Enumerable.Empty<Type>();
+                }
+                else if (!Directory.Exists(binLocation))
+                {
+                    Utilities.WriteToConsoleWithColor($"Build of library was successful, but bin folder was not found. Make sure the csproj does not have a different OutputPath specified", ConsoleColor.Red);
+                    return Enumerable.Empty<Type>();
+                }
+            }
+
+            string[] dlls = Directory.GetFiles(binLocation, $"{libraryName}.dll", SearchOption.AllDirectories);
+            if (dlls.Length < 1)
+            {
+                Utilities.WriteToConsoleWithColor($"No {libraryName}.dll found. Make sure the csproj does not have a different OutputPath specified", ConsoleColor.Red);
+                return Enumerable.Empty<Type>();
+            }
+
+            var asm = Assembly.LoadFile(dlls[0]);
             IEnumerable<Type> tasksInDll = asm.GetTypes().Where(t => typeof(ITask).IsAssignableFrom(t) && !t.IsInterface && !t.IsAbstract);
 
             if (!tasksInDll.Any())
             {
-                Console.WriteLine("Library does not contain any tasks");
+                Utilities.WriteToConsoleWithColor($"Library {libraryName} does not contain any tasks", ConsoleColor.Red);
             }
 
             return tasksInDll;
+        }
+
+        private static IEnumerable<Type> GetTasksFromAssembly(Assembly assembly)
+        {
+            return assembly.GetTypes().Where(t => typeof(ITask).IsAssignableFrom(t) && !t.IsInterface && !t.IsAbstract);
         }
 
         private static async Task RunTaskPeriodicAsync(ITask task)
