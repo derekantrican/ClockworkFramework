@@ -1,4 +1,6 @@
-namespace Clockwork.Core
+using Clockwork.Core;
+
+namespace Clockwork
 {
     public class ExampleTask : ITask
     {
