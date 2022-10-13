@@ -33,6 +33,7 @@ namespace Clockwork.Core
 
         public static void WriteToConsoleWithColor(object obj, ConsoleColor color)
         {
+            //Note that this may not work 100% because of the asynchronous nature of tasks
             Console.ForegroundColor = color;
             Console.WriteLine(obj);
             Console.ResetColor();

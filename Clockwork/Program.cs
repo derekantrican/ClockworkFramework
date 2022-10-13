@@ -11,9 +11,6 @@ namespace Clockwork
       (the Clockwork framework) should shut down & update or just the tasks (maybe could do a `git pull` on just that folder https://stackoverflow.com/a/4048993/2246411).
       Tasks could even be a separate assembly that could be unloaded, updated, then re-registered. That way, 1) the git operations could be
       entirely within the C# code here (rather than batch) and 2) the "Tasks" would have a clear separation from the Clockwork framework
-    - On the note of "a separate place for user-defined Tasks", the user could keep a separate repo for tasks, then in the Clockworks repo could specify something
-      like a ".env" file with the Tasks library path (https://codingvision.net/c-load-dll-at-runtime) & an update (git pull) cadence. We would just need to 
-      figure out how to safely load the library from a filepath.
     */
     class Program
     {
@@ -32,8 +29,17 @@ namespace Clockwork
 
             //Todo: add ability to load tasks from a separate directory and - if not found - announce something like "No Tasks found, running
             //in demo mode" and run the Example tasks (ie make sure Example tasks aren't run with user-specified tasks)
-            IEnumerable<Type> foundTasks = Assembly.GetExecutingAssembly().GetTypes().Where(t => typeof(ITask).IsAssignableFrom(t) && !t.IsInterface && !t.IsAbstract);
-            foreach (Type type in foundTasks)
+
+            IEnumerable<Type> tasks = LoadLibraryTasks();
+            if (!tasks.Any())
+            {
+                Utilities.WriteToConsoleWithColor($"No external tasks loaded. Loading internal example tasks instead.", ConsoleColor.Yellow);
+                Assembly currentAssembly = Assembly.GetExecutingAssembly();
+                IEnumerable<Type> exampleTasks = currentAssembly.GetTypes().Where(t => typeof(ITask).IsAssignableFrom(t) && !t.IsInterface && !t.IsAbstract);
+                tasks = exampleTasks;
+            }
+
+            foreach (Type type in tasks)
             {
                 ITask task = (ITask)Activator.CreateInstance(type);
                 Console.WriteLine($"Found and registered task {type.FullName}");
@@ -42,6 +48,20 @@ namespace Clockwork
             }
 
             Task.WaitAll(runningTasks.ToArray());
+        }
+
+        private static IEnumerable<Type> LoadLibraryTasks()
+        {
+            string dllLocation = Path.GetFullPath(@"..\..\ClockworkTasks\bin\Debug\net6.0\ClockworkTasks.dll"); //Todo: in the future, should use the csproj/folder location
+            var asm = Assembly.LoadFile(dllLocation);
+            IEnumerable<Type> tasksInDll = asm.GetTypes().Where(t => typeof(ITask).IsAssignableFrom(t) && !t.IsInterface && !t.IsAbstract);
+
+            if (!tasksInDll.Any())
+            {
+                Console.WriteLine("Library does not contain any tasks");
+            }
+
+            return tasksInDll;
         }
 
         private static async Task RunTaskPeriodicAsync(ITask task)
