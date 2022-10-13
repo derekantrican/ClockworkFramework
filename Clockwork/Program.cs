@@ -1,4 +1,5 @@
 ﻿using System.Reflection;
+using Newtonsoft.Json;
 using Clockwork.Core;
 
 namespace Clockwork
@@ -14,26 +15,50 @@ namespace Clockwork
     */
     class Program
     {
+        private static Config config = new Config();
         private static List<ITask> tasks = new List<ITask>();
 
         private static void Main(string[] args)
         {
-            Console.WriteLine(args.Length > 0 ? args[0] : "");
-            
+            LoadConfig();
             RegisterAndRunTasks();
+        }
+
+        private static void LoadConfig()
+        {
+            string configFile = "config.json";
+            if (!File.Exists(configFile))
+            {
+                Utilities.WriteToConsoleWithColor("No config file found. Using default settings.", ConsoleColor.Yellow);
+                return;
+            }
+
+            try
+            {
+                config = JsonConvert.DeserializeObject<Config>(File.ReadAllText(configFile));
+            }
+            catch (Exception ex)
+            {
+                Utilities.WriteToConsoleWithColor($"Failed to load config: {ex.Message}\n{ex.StackTrace}", ConsoleColor.Red);
+            }
         }
 
         private static void RegisterAndRunTasks()
         {
             List<Task> runningTasks = new List<Task>();
 
-            IEnumerable<Type> tasks = LoadLibraryTasks(Path.GetFullPath(@"..\..\ClockworkTasks")); //Todo: load library paths from file
-            if (!tasks.Any())
+            List<Type> tasks = new List<Type>();
+            foreach (Config.Library library in config.Libraries)
+            {
+                tasks.AddRange(LoadLibraryTasks(Path.GetFullPath(library.Path)));
+            }
+
+            if (tasks.Count == 0)
             {
                 Utilities.WriteToConsoleWithColor($"No external tasks loaded. Loading internal example tasks instead.", ConsoleColor.Yellow);
                 Assembly currentAssembly = Assembly.GetExecutingAssembly();
                 IEnumerable<Type> exampleTasks = GetTasksFromAssembly(currentAssembly);
-                tasks = exampleTasks;
+                tasks.AddRange(exampleTasks);
             }
 
             foreach (Type type in tasks)
