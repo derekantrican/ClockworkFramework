@@ -1,8 +1,8 @@
-using Clockwork.Core;
+using Clockwork.Tasks;
 
 namespace Clockwork.Examples
 {
-    public class ExampleTask : ITask
+    public class ExampleTask : IClockworkTask
     {
         public Interval Interval => new Interval(TimeType.Second, 30);
 

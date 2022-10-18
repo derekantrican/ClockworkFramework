@@ -1,10 +1,10 @@
-using Clockwork.Core;
+using Clockwork.Tasks;
 
 namespace Clockwork.Examples
 {
-    public class ExampleApiTask : ITask
+    public class ExampleApIClockworkTask : IClockworkTask
     {
-        public Interval Interval => new Interval(TimeType.Year, 1);
+        public Interval Interval => new Interval(TimeType.Hour, 1);
 
         public void Run()
         {

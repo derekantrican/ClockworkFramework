@@ -1,6 +1,6 @@
-namespace Clockwork.Core
+namespace Clockwork.Tasks
 {
-    public interface ITask
+    public interface IClockworkTask
     {
         Interval Interval { get; }
 

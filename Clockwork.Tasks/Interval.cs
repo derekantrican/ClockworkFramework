@@ -1,4 +1,4 @@
-namespace Clockwork.Core
+namespace Clockwork.Tasks
 {
     public enum TimeType
     {
@@ -38,7 +38,7 @@ namespace Clockwork.Core
         {
             if (timeType == TimeType.Day || timeType == TimeType.Year)
             {
-                throw new ArgumentException("For TimeType.Day or TimeType.Year, use the constructor Interval(timeType, frequency, hour, minute)");
+                throw new ArgumentException("For TimeType.Day or TimeType.Year, use the constructor Interval(timeType, frequency, hour, minute)"); //Todo: specifying hour & minute should be optional, not required
             }
             else if (timeType == TimeType.Week)
             {

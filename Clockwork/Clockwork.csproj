@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <ProjectReference Include="..\Clockwork.Core\Clockwork.Core.csproj" />
+    <ProjectReference Include="..\Clockwork.Tasks\Clockwork.Tasks.csproj" />
   </ItemGroup>
 
   <PropertyGroup>

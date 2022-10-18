@@ -1,6 +1,5 @@
-﻿using System.Reflection;
-using Newtonsoft.Json;
-using Clockwork.Core;
+﻿using Newtonsoft.Json;
+using Clockwork.Tasks;
 
 namespace Clockwork
 {
@@ -8,20 +7,17 @@ namespace Clockwork
     Ideas:
     - Should take adavantage of Windows Task Scheduler for an install script & to restart itself every night (in case it stops running).
       Can reference https://github.com/derekantrican/MountainProject/blob/master/MountainProjectBot/ScheduleTasks.bat
-    - Should update tasks from github on a certain cadence (either once/day, once/hour, or even once/5min). Don't know if the whole program
-      (the Clockwork framework) should shut down & update or just the tasks (maybe could do a `git pull` on just that folder https://stackoverflow.com/a/4048993/2246411).
-      Tasks could even be a separate assembly that could be unloaded, updated, then re-registered. That way, 1) the git operations could be
-      entirely within the C# code here (rather than batch) and 2) the "Tasks" would have a clear separation from the Clockwork framework
     */
     class Program
     {
         private static Config config = new Config();
-        private static List<ITask> tasks = new List<ITask>();
+        private static List<IClockworkTask> tasks = new List<IClockworkTask>();
 
         private static void Main(string[] args)
         {
+            //Todo: support a "verbosity" arg that won't output setup, teardown, etc messages
             LoadConfig();
-            RegisterAndRunTasks();
+            RegisterAndRunTasks().Wait();
         }
 
         private static void LoadConfig()
@@ -43,154 +39,110 @@ namespace Clockwork
             }
         }
 
-        private static void RegisterAndRunTasks()
+        private class TaskConfiguration
+        {
+            public Config.Library Source { get; set; }
+            public Type TaskType { get; set; }
+            public IClockworkTask Instance { get; set; }
+            public Task RunningTask { get; set; }
+            public CancellationTokenSource CancellationToken { get; set; } = new CancellationTokenSource();
+        }
+
+        private static async Task RegisterAndRunTasks()
         {
             List<Task> runningTasks = new List<Task>();
 
-            List<Type> tasks = new List<Type>();
+            List<TaskConfiguration> tasks = new List<TaskConfiguration>();
             foreach (Config.Library library in config.Libraries)
             {
-                tasks.AddRange(LoadLibraryTasks(Path.GetFullPath(library.Path)));
+                tasks.AddRange(TaskLoader.LoadLibraryTasks(Path.GetFullPath(library.Path)).Select(t => new TaskConfiguration
+                {
+                    Source = library,
+                    TaskType = t,
+                }));
             }
 
             if (tasks.Count == 0)
             {
                 Utilities.WriteToConsoleWithColor($"No external tasks loaded. Loading internal example tasks instead.", ConsoleColor.Yellow);
-                Assembly currentAssembly = Assembly.GetExecutingAssembly();
-                IEnumerable<Type> exampleTasks = GetTasksFromAssembly(currentAssembly).Where(t => t.Namespace == "Clockwork.Examples");
-                tasks.AddRange(exampleTasks);
+                tasks.AddRange(TaskLoader.LoadExampleTasks().Select(t => new TaskConfiguration { TaskType = t }));
             }
 
-            foreach (Type type in tasks)
+            foreach (TaskConfiguration task in tasks)
             {
-                ITask task = (ITask)Activator.CreateInstance(type);
-                Console.WriteLine($"Found and registered task {type.FullName}");
-
-                runningTasks.Add(RunTaskPeriodicAsync(task));
-            }
-
-            Task.WaitAll(runningTasks.ToArray());
-        }
-
-        private static IEnumerable<Type> LoadLibraryTasks(string libraryLocation)
-        {
-            if (libraryLocation.EndsWith(".dll"))
-            {
-                return LoadTasksFromDll(libraryLocation);
-            }
-            else if (libraryLocation.EndsWith(".csproj"))
-            {
-                return BuildCsprojAndLoadTasksFromBin(libraryLocation);
-            }
-            else //Assume library is a folder
-            {
-                string libraryName = new DirectoryInfo(libraryLocation).Name;
-                string binLocation = Path.Combine(libraryLocation, "bin");
-                Console.WriteLine($"Loading library {libraryName}");
+                task.Instance = (IClockworkTask)Activator.CreateInstance(task.TaskType);
+                Console.WriteLine($"Found and registered task {task.TaskType.FullName}");
                 
-                string[] csprojs = Directory.GetFiles(libraryLocation, "*.csproj");
-                if (csprojs.Length < 1)
-                {
-                    Utilities.WriteToConsoleWithColor($"No .csproj found at location {libraryLocation} . Please make sure you are specifying the immediate parent folder to a .csproj", ConsoleColor.Red);
-                    return Enumerable.Empty<Type>();
-                }
-
-                return BuildCsprojAndLoadTasksFromBin(csprojs[0]);
-            }
-        }
-
-        private static IEnumerable<Type> BuildCsprojAndLoadTasksFromBin(string csprojPath)
-        {
-            string libraryLocation = new FileInfo(csprojPath).DirectoryName;
-            string binLocation = Path.Combine(libraryLocation, "bin");
-            string libraryName = Path.GetFileNameWithoutExtension(csprojPath);
-
-            if (!Directory.Exists(binLocation))
-            {
-                var result = Utilities.RunProcess("dotnet build", libraryLocation);
-                if (result.ExitCode != 0)
-                {
-                    Utilities.WriteToConsoleWithColor($"Build of library was unsuccessful. Log output below.\n\n{result.StdOut}\n\n{result.StdErr}", ConsoleColor.Red);
-                    return Enumerable.Empty<Type>();
-                }
-                else if (!Directory.Exists(binLocation))
-                {
-                    Utilities.WriteToConsoleWithColor($"Build of library was successful, but bin folder was not found. Make sure the csproj does not have a different OutputPath specified", ConsoleColor.Red);
-                    return Enumerable.Empty<Type>();
-                }
+                task.RunningTask = TaskRunner.RunTaskPeriodicAsync(task.Instance, task.CancellationToken.Token);
+                runningTasks.Add(task.RunningTask);
             }
 
-            string[] dlls = Directory.GetFiles(binLocation, $"{libraryName}.dll", SearchOption.AllDirectories);
-            if (dlls.Length < 1)
+            if (config.RepositoryUpdateFrequency > 0)
             {
-                Utilities.WriteToConsoleWithColor($"No {libraryName}.dll found. Make sure the csproj does not have a different OutputPath specified", ConsoleColor.Red);
-                return Enumerable.Empty<Type>();
-            }
-
-            return LoadTasksFromDll(dlls[0]);
-        }
-
-        private static IEnumerable<Type> LoadTasksFromDll(string dllPath)
-        {
-            string libraryName = Path.GetFileNameWithoutExtension(dllPath);
-            Assembly asm = Assembly.LoadFile(dllPath);
-            IEnumerable<Type> tasksInDll = asm.GetTypes().Where(t => typeof(ITask).IsAssignableFrom(t) && !t.IsInterface && !t.IsAbstract);
-
-            if (!tasksInDll.Any())
-            {
-                Utilities.WriteToConsoleWithColor($"Library {libraryName} does not contain any tasks", ConsoleColor.Red);
-            }
-
-            return tasksInDll;
-        }
-
-        private static IEnumerable<Type> GetTasksFromAssembly(Assembly assembly)
-        {
-            return assembly.GetTypes().Where(t => typeof(ITask).IsAssignableFrom(t) && !t.IsInterface && !t.IsAbstract);
-        }
-
-        private static async Task RunTaskPeriodicAsync(ITask task)
-        {
-            while (true)
-            {
-                await Task.Run(() =>
+                runningTasks.Add(Task.Run(async () => 
                 {
-                    RunWithCatch(() =>
+                    while (true)
                     {
-                        RunTaskMethod(task, () => task.Setup(), "setup");
-                        RunTaskMethod(task, () => task.Run());
-                        RunTaskMethod(task, () => task.Teardown(), "teardown");
-                    },
-                    ex => 
-                    {
-                        Console.WriteLine($"[{DateTime.Now}] Task '{task}' catch failed: ${ex.Message}\n{ex.StackTrace}");
-                    });
-                });
+                        await Task.Run(() =>
+                        {
+                            foreach (Config.Library library in config.Libraries)
+                            {
+                                Console.WriteLine($"Updating library {library.Path/*Todo: should have a better way of accessing the name*/}");
 
-                await Task.Delay(task.Interval.CalculateTimeToNext(DateTime.Now));
+                                var result = Utilities.RunProcess("git pull", library.Path);
+                                if (result.ExitCode != 0)
+                                {
+                                    Utilities.WriteToConsoleWithColor($"Failed to update library {library.Path}. Log output below.\n\n{result.StdOut}\n\n{result.StdErr}", ConsoleColor.Red);
+                                    continue;
+                                }
+
+                                Utilities.WriteToConsoleWithColor(result.StdOut, ConsoleColor.DarkGreen);
+
+                                if (result.StdOut.Contains("Already up to date"))
+                                {
+                                    Utilities.WriteToConsoleWithColor("Library is already up to date", ConsoleColor.DarkGreen);
+                                    continue;
+                                }
+
+                                Utilities.WriteToConsoleWithColor("Cancelling current library tasks", ConsoleColor.DarkGreen);
+
+                                foreach (TaskConfiguration task in tasks.Where(t => t.Source == library).ToList())
+                                {
+                                    Utilities.WriteToConsoleWithColor($"Canceling task {task.Instance}", ConsoleColor.DarkGreen);
+                                    task.CancellationToken.Cancel();
+                                    tasks.Remove(task);
+                                }
+
+                                Utilities.WriteToConsoleWithColor("Loading new version of library tasks", ConsoleColor.DarkGreen);
+
+                                foreach (Type taskType in TaskLoader.LoadLibraryTasks(Path.GetFullPath(library.Path), true))
+                                {
+                                    TaskConfiguration task = new TaskConfiguration
+                                    {
+                                        Source = library,
+                                        TaskType = taskType,
+                                        Instance = (IClockworkTask)Activator.CreateInstance(taskType),
+                                    };
+
+                                    task.RunningTask = TaskRunner.RunTaskPeriodicAsync(task.Instance, task.CancellationToken.Token);
+                                    tasks.Add(task);
+                                    runningTasks.Add(task.RunningTask);
+                                }
+
+                                //Todo: add the option for some sort of hook (eg Discord message) to indicate that the library is up to date (commit id can
+                                // be included based on the result.StdOut). Maybe the library can also have a version of Config.cs or something so hooks can be customized?
+                            }
+                        });
+
+                        await Task.Delay(TimeSpan.FromMinutes(config.RepositoryUpdateFrequency));
+                    }
+                }));
             }
-        }
 
-        private static void RunTaskMethod(ITask task, Action action, string methodName = "")
-        {
-            Console.WriteLine($"[{DateTime.Now}] Running task '{task}' {methodName}");
-            RunWithCatch(action, ex =>
+            //https://stackoverflow.com/a/50440399/2246411 wait while also allowing runningTasks to be changed
+            while (runningTasks.Any(t => !t.IsCompleted)) 
             {
-                Console.WriteLine($"[{DateTime.Now}] Task '{task}' {methodName} failed");
-                task.Catch(ex);
-            });
-            Console.WriteLine($"[{DateTime.Now}] Task '{task}' {methodName} completed successfully");
-        }
-
-        private static void RunWithCatch(Action action, Action<Exception> onException)
-        {
-            try
-            {
-                action();
-            }
-            catch (Exception e)
-            {
-                onException(e);
+                await Task.WhenAll(runningTasks);
             }
         }
     }
