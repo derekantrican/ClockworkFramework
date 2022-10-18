@@ -398,4 +398,4 @@ FodyWeavers.xsd
 *.sln.iml
 
 # Clockwork files
-Clockwork/config.json
+ClockworkFramework/config.json
