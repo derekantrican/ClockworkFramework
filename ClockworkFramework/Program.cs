@@ -1,5 +1,5 @@
 ﻿using Newtonsoft.Json;
-using Clockwork.Tasks;
+using ClockworkFramework.Core;
 
 namespace Clockwork
 {
@@ -79,6 +79,7 @@ namespace Clockwork
 
             if (config.RepositoryUpdateFrequency > 0)
             {
+                //Todo: should Clockwork have a way of (optionally) updating itself?
                 runningTasks.Add(Task.Run(async () => 
                 {
                     while (true)

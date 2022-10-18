@@ -2,7 +2,7 @@ using System.Diagnostics;
 using System.Text;
 using Newtonsoft.Json;
 
-namespace Clockwork.Tasks
+namespace ClockworkFramework.Core
 {
     public class Utilities
     {

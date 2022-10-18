@@ -1,10 +1,10 @@
-using Clockwork.Tasks;
+using ClockworkFramework.Core;
 
 namespace Clockwork.Examples
 {
-    public class ExampleTask : IClockworkTask
+    public class ExampleTask2 : IClockworkTask
     {
-        public Interval Interval => new Interval(TimeType.Second, 30);
+        public Interval Interval => new Interval(TimeType.Second, 10);
 
         //Optional: you can add a constructor to do any one-time setup when the instance is created
         //or you can add Setup() or Teardown() methods that will be called on each run. Additionally,
@@ -12,7 +12,7 @@ namespace Clockwork.Examples
 
         public void Run()
         {
-            Utilities.WriteToConsoleWithColor("ExampleTask is running", ConsoleColor.Yellow);
+            Utilities.WriteToConsoleWithColor("ExampleTask2 is running", ConsoleColor.Yellow);
         }
     }
 }

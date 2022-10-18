@@ -1,4 +1,4 @@
-using Clockwork.Tasks;
+using ClockworkFramework.Core;
 
 namespace Clockwork
 {

@@ -1,4 +1,4 @@
-namespace Clockwork.Tasks
+namespace ClockworkFramework.Core
 {
     public enum TimeType
     {
