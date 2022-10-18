@@ -31,6 +31,6 @@ A basic automation framework for running tasks on an interval. Useful for things
         }
     ]
 }
+```
 
 6. Run the ClockworkFramework.exe to load your new library
-```
