@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+    <metadata>
+        <id>ClockworkFramework.Core</id>
+        <version>1.0.0</version>
+        <authors>derekantrican</authors>
+        <owners>derekantrican</owners>
+        <projectUrl>https://github.com/derekantrican/ClockworkFramework</projectUrl>
+        <license type="expression">MIT</license>
+        <description>Core utility functions for web applications</description>
+        <tags>.NET automation</tags>
+        <dependencies>
+            <dependency id="Newtonsoft.Json" version="13.0.1" />
+        </dependencies>
+    </metadata>
+</package>
