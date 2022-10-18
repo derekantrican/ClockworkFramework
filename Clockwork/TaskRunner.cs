@@ -8,6 +8,8 @@ namespace Clockwork
         {
             while (true)
             {
+                await Task.Delay(task.Interval.CalculateTimeToNext(DateTime.Now), cancellationToken);
+
                 if (cancellationToken.IsCancellationRequested)
                 {
                     break;
@@ -26,8 +28,6 @@ namespace Clockwork
                         Console.WriteLine($"[{DateTime.Now}] Task '{task}' catch failed: ${ex.Message}\n{ex.StackTrace}");
                     });
                 });
-
-                await Task.Delay(task.Interval.CalculateTimeToNext(DateTime.Now), cancellationToken);
             }
         }
 
