@@ -1,9 +1,0 @@
-{
-    "repositoryUpdateFrequency" : 5,
-    "libraries" : [
-        {
-            "path" : "..\\..\\ClockworkTasks",
-            "updateRepository" : true
-        }
-    ]
-}
