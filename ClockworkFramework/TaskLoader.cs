@@ -5,21 +5,25 @@ namespace Clockwork
 {
     public static class TaskLoader
     {
-        public static IEnumerable<Type> LoadLibraryTasks(string libraryLocation, bool forceRebuildIfApplicable = false)
+        public static IEnumerable<Type> LoadLibraryTasks(Library library, bool forceRebuildIfApplicable = false)
         {
+            string libraryLocation = Path.GetFullPath(library.Path);
+
             if (libraryLocation.EndsWith(".dll"))
             {
-                return LoadTasksFromDll(libraryLocation);
+                library.Name = Path.GetFileNameWithoutExtension(libraryLocation);
+                library.Assembly = LoadAssemblyFromDll(libraryLocation);
             }
             else if (libraryLocation.EndsWith(".csproj"))
             {
-                return BuildCsprojAndLoadTasksFromBin(libraryLocation, forceRebuildIfApplicable);
+                library.Name = Path.GetFileNameWithoutExtension(libraryLocation);
+                library.Assembly = BuildCsprojAndLoadAssemblyFromBin(libraryLocation, forceRebuildIfApplicable);
             }
             else //Assume library is a folder
             {
-                string libraryName = new DirectoryInfo(libraryLocation).Name;
+                library.Name = new DirectoryInfo(libraryLocation).Name;
                 string binLocation = Path.Combine(libraryLocation, "bin");
-                Console.WriteLine($"Loading library {libraryName}");
+                Console.WriteLine($"Loading library {library.Name}");
                 
                 string[] csprojs = Directory.GetFiles(libraryLocation, "*.csproj");
                 if (csprojs.Length < 1)
@@ -28,11 +32,20 @@ namespace Clockwork
                     return Enumerable.Empty<Type>();
                 }
 
-                return BuildCsprojAndLoadTasksFromBin(csprojs[0], forceRebuildIfApplicable);
+                library.Assembly = BuildCsprojAndLoadAssemblyFromBin(csprojs[0], forceRebuildIfApplicable);
             }
+
+            IEnumerable<Type> tasksInDll = GetTypesOfTypeFromAssembly(library.Assembly, typeof(IClockworkTask));
+
+            if (!tasksInDll.Any())
+            {
+                Utilities.WriteToConsoleWithColor($"Library {library.Name} does not contain any tasks", ConsoleColor.Red);
+            }
+
+            return tasksInDll;
         }
 
-        private static IEnumerable<Type> BuildCsprojAndLoadTasksFromBin(string csprojPath, bool forceRebuildIfApplicable = false)
+        private static Assembly BuildCsprojAndLoadAssemblyFromBin(string csprojPath, bool forceRebuildIfApplicable = false)
         {
             string libraryLocation = new FileInfo(csprojPath).DirectoryName;
             string binLocation = Path.Combine(libraryLocation, "bin");
@@ -44,12 +57,12 @@ namespace Clockwork
                 if (result.ExitCode != 0)
                 {
                     Utilities.WriteToConsoleWithColor($"Build of library was unsuccessful. Log output below.\n\n{result.StdOut}\n\n{result.StdErr}", ConsoleColor.Red);
-                    return Enumerable.Empty<Type>();
+                    return null;
                 }
                 else if (!Directory.Exists(binLocation))
                 {
                     Utilities.WriteToConsoleWithColor($"Build of library was successful, but bin folder was not found. Make sure the csproj does not have a different OutputPath specified", ConsoleColor.Red);
-                    return Enumerable.Empty<Type>();
+                    return null;
                 }
             }
 
@@ -57,34 +70,25 @@ namespace Clockwork
             if (dlls.Length < 1)
             {
                 Utilities.WriteToConsoleWithColor($"No {libraryName}.dll found. Make sure the csproj does not have a different OutputPath specified", ConsoleColor.Red);
-                return Enumerable.Empty<Type>();
+                return null;
             }
 
-            return LoadTasksFromDll(dlls[0]);
+            return LoadAssemblyFromDll(dlls[0]);
         }
 
-        private static IEnumerable<Type> LoadTasksFromDll(string dllPath)
+        private static Assembly LoadAssemblyFromDll(string dllPath)
         {
-            string libraryName = Path.GetFileNameWithoutExtension(dllPath);
-            Assembly asm = Assembly.Load(File.ReadAllBytes(dllPath));
-            IEnumerable<Type> tasksInDll = asm.GetTypes().Where(t => typeof(IClockworkTask).IsAssignableFrom(t) && !t.IsInterface && !t.IsAbstract);
-
-            if (!tasksInDll.Any())
-            {
-                Utilities.WriteToConsoleWithColor($"Library {libraryName} does not contain any tasks", ConsoleColor.Red);
-            }
-
-            return tasksInDll;
+            return Assembly.Load(File.ReadAllBytes(dllPath)); //Loading the assembly by its byte content means it doesn't stay loaded (so it can be reloaded later without unloading)
         }
 
         public static IEnumerable<Type> LoadExampleTasks()
         {
-            return GetTasksFromAssembly(Assembly.GetExecutingAssembly()).Where(t => t.Namespace == "Clockwork.Examples");
+            return GetTypesOfTypeFromAssembly(Assembly.GetExecutingAssembly(), typeof(IClockworkTask)).Where(t => t.Namespace == "Clockwork.Examples");
         }
 
-        private static IEnumerable<Type> GetTasksFromAssembly(Assembly assembly)
+        public static IEnumerable<Type> GetTypesOfTypeFromAssembly(Assembly assembly, Type type)
         {
-            return assembly.GetTypes().Where(t => typeof(IClockworkTask).IsAssignableFrom(t) && !t.IsInterface && !t.IsAbstract);
+            return assembly?.GetTypes().Where(t => type.IsAssignableFrom(t) && !t.IsInterface && !t.IsAbstract) ?? Enumerable.Empty<Type>();
         }
     }
 }

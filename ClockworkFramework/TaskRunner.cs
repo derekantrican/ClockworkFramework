@@ -4,7 +4,7 @@ namespace Clockwork
 {
     public class TaskRunner
     {
-        public static async Task RunTaskPeriodicAsync(IClockworkTask task, CancellationToken cancellationToken)
+        public static async Task RunTaskPeriodicAsync(IClockworkTask task, CancellationToken cancellationToken, Action<Exception> exceptionHandler = null)
         {
             while (true)
             {
@@ -26,6 +26,7 @@ namespace Clockwork
                     ex => 
                     {
                         Console.WriteLine($"[{DateTime.Now}] Task '{task}' catch failed: ${ex.Message}\n{ex.StackTrace}");
+                        exceptionHandler?.Invoke(ex);
                     });
                 });
             }
