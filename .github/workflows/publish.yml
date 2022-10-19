@@ -9,6 +9,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+      - name: Pack
+        run: dotnet pack ClockworkFramework.Core\\ClockworkFramework.Core.csproj -c Release
+      - name: Publish
+        run: dotnet nuget push *.nupkg --api-key ${{secrets.NUGET_API_KEY}} --source "https://api.nuget.org/v3/index.json" --skip-duplicate
 
       # - name: Setup dotnet
       #   uses: actions/setup-dotnet@v1
@@ -17,11 +21,11 @@ jobs:
 
       # Publish
       # https://github.com/brandedoutcast/publish-nuget
-      - name: publish on version change
-        id: publish_nuget
-        uses: alirezanet/publish-nuget@v3
-        with:
-          PROJECT_FILE_PATH: ClockworkFramework.Core/ClockworkFramework.Core.csproj
-          BUILD_CONFIGURATION: Release
-          VERSION_REGEX: ^\s*<Version>(.*)<\/Version>\s*$
-          NUGET_KEY: ${{secrets.NUGET_API_KEY}}
+#       - name: publish on version change
+#         id: publish_nuget
+#         uses: alirezanet/publish-nuget@v3
+#         with:
+#           PROJECT_FILE_PATH: ClockworkFramework.Core/ClockworkFramework.Core.csproj
+#           BUILD_CONFIGURATION: Release
+#           VERSION_REGEX: ^\s*<Version>(.*)<\/Version>\s*$
+#           NUGET_KEY: ${{secrets.NUGET_API_KEY}}
