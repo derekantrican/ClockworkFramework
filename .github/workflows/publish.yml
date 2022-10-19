@@ -19,7 +19,7 @@ jobs:
       # https://github.com/brandedoutcast/publish-nuget
       - name: publish on version change
         id: publish_nuget
-        uses: brandedoutcast/publish-nuget@v2
+        uses: alirezanet/publish-nuget@v3
         with:
           PROJECT_FILE_PATH: ClockworkFramework.Core/ClockworkFramework.Core.csproj
           BUILD_CONFIGURATION: Release
