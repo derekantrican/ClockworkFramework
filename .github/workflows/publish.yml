@@ -10,7 +10,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Pack
-        run: dotnet pack ClockworkFramework.Core\\ClockworkFramework.Core.csproj -c Release
+        run: dotnet pack ClockworkFramework.Core\\ClockworkFramework.Core.csproj -c Release -o .
       - name: Publish
         run: dotnet nuget push *.nupkg --api-key ${{secrets.NUGET_API_KEY}} --source "https://api.nuget.org/v3/index.json" --skip-duplicate
 
