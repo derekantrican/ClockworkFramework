@@ -36,13 +36,15 @@ namespace Clockwork
         {
             Console.WriteLine($"[{DateTime.Now}] Running task '{task}' {methodName}");
 
-            RunWithCatch(action, ex =>
+            RunWithCatch(() => 
+            {
+                action();
+                Console.WriteLine($"[{DateTime.Now}] Task '{task}' {methodName} completed successfully");
+            }, ex =>
             {
                 Console.WriteLine($"[{DateTime.Now}] Task '{task}' {methodName} failed");
                 task.Catch(ex);
             });
-
-            Console.WriteLine($"[{DateTime.Now}] Task '{task}' {methodName} completed successfully");
         }
 
         private static void RunWithCatch(Action action, Action<Exception> onException)
