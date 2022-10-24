@@ -78,21 +78,27 @@ namespace Clockwork
 
         private static Assembly LoadAssemblyFromDll(string dllPath)
         {
+            AppDomain.CurrentDomain.AssemblyResolve += ResolveAssembly;
+
             string dllFolder = new FileInfo(dllPath).DirectoryName;
-            var assem = Assembly.Load(File.ReadAllBytes(dllPath)); //Loading the assembly by its byte content means it doesn't stay loaded (so it can be reloaded later without unloading)
+            var assemblies = Assembly.Load(File.ReadAllBytes(dllPath)); //Loading the assembly by its byte content means it doesn't stay loaded (so it can be reloaded later without unloading)
 
             //Load assembly dependencies
-            foreach (AssemblyName refAssembly in assem.GetReferencedAssemblies())
+            foreach (AssemblyName refAssembly in assemblies.GetReferencedAssemblies())
             {
                 string refAssemblyPath = Path.Combine(dllFolder, $"{refAssembly.Name}.dll");
                 if (refAssembly.Name != "ClockworkFramework.Core" && File.Exists(refAssemblyPath))
                 {
-                    Assembly.Load(File.ReadAllBytes(refAssemblyPath));
-                    Console.WriteLine($"Loaded referenced assembly {refAssembly.Name}");
+                    var assem = Assembly.Load(File.ReadAllBytes(refAssemblyPath));
                 }
             }
 
-            return assem;
+            return assemblies;
+        }
+
+        private static Assembly ResolveAssembly(object sender, ResolveEventArgs args)
+        {
+            return ((AppDomain)sender).GetAssemblies().FirstOrDefault(a => a.FullName == args.Name);
         }
 
         public static IEnumerable<Type> LoadExampleTasks()
