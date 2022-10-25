@@ -1,7 +1,7 @@
 using System.Reflection;
 using ClockworkFramework.Core;
 
-namespace Clockwork
+namespace ClockworkFramework
 {
     public static class TaskLoader
     {
@@ -35,7 +35,7 @@ namespace Clockwork
                 library.Assembly = BuildCsprojAndLoadAssemblyFromBin(csprojs[0], forceRebuildIfApplicable);
             }
 
-            IEnumerable<Type> tasksInDll = GetTypesOfTypeFromAssembly(library.Assembly, typeof(IClockworkTask));
+            IEnumerable<Type> tasksInDll = GetTypesOfTypeFromAssembly(library.Assembly, typeof(IClockworkTaskBase));
 
             if (!tasksInDll.Any())
             {
@@ -101,9 +101,15 @@ namespace Clockwork
             return ((AppDomain)sender).GetAssemblies().FirstOrDefault(a => a.FullName == args.Name);
         }
 
-        public static IEnumerable<Type> LoadExampleTasks()
+        public static IEnumerable<MethodInfo> LoadExampleTasks()
         {
-            return GetTypesOfTypeFromAssembly(Assembly.GetExecutingAssembly(), typeof(IClockworkTask)).Where(t => t.Namespace == "Clockwork.Examples");
+            IEnumerable<Type> exampleClasses = GetTypesOfTypeFromAssembly(Assembly.GetExecutingAssembly(), typeof(IClockworkTaskBase)).Where(t => t.Namespace == "ClockworkFramework.Examples");
+            return exampleClasses.SelectMany(t => LoadTaskMethodsFromClassType(t));
+        }
+
+        public static IEnumerable<MethodInfo> LoadTaskMethodsFromClassType(Type type)
+        {
+            return type.GetMethods().Where(m => m.GetCustomAttribute(typeof(TaskMethodAttribute)) != null);
         }
 
         public static IEnumerable<Type> GetTypesOfTypeFromAssembly(Assembly assembly, Type type)

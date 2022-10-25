@@ -1,11 +1,11 @@
 using ClockworkFramework.Core;
 
-namespace Clockwork.Examples
+namespace ClockworkFramework.Examples
 {
-    public class ExampleApIClockworkTask : IClockworkTask
+    public class ExampleApiTask : IClockworkTaskBase
     {
-        public Interval Interval => new Interval(TimeType.Hour, 1);
-
+        [TaskMethod]
+        [Interval(TimeType.Minute, 1)]
         public void Run()
         {
             dynamic user = Utilities.JsonToDynamic(Utilities.ApiRequest("https://randomuser.me/api", HttpMethod.Get)).results[0];

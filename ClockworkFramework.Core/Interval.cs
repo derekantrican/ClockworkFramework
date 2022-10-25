@@ -13,6 +13,9 @@ namespace ClockworkFramework.Core
 
     public class Interval
     {
+        //Todo: simplify interval constructors somehow (and therefore: attribute)
+        //Todo: allow for "Interval.Once" to only run a task one time after startup
+
         public Interval(TimeType timeType, int frequency, int hour, int minute)
         {
             if (timeType == TimeType.Week)

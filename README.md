@@ -15,7 +15,7 @@ A basic automation framework for running tasks on an interval. Useful for things
 1. Create a folder (ideally, not inside the ClockworkFramework folder)
 2. Run `dotnet new console`
 3. Run `dotnet add package ClockworkFramework.Core`
-4. Add one or more tasks that implement `IClockworkTask` (see [Examples](https://github.com/derekantrican/ClockworkFramework/tree/master/ClockworkFramework/Examples))
+4. Add one or more classes that implement `IClockworkTaskBase` and a method with the `[TaskMethod]` & `[Interval(..)]` attributes (see [Examples](https://github.com/derekantrican/ClockworkFramework/tree/master/ClockworkFramework/Examples))
 
     *For some common needs like calling an API or running a process you can use the `Utilties` class. See [ExampleApiTask](https://github.com/derekantrican/ClockworkFramework/blob/master/ClockworkFramework/Examples/ExampleApiTask.cs)*
 

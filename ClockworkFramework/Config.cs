@@ -1,6 +1,6 @@
 using ClockworkFramework.Core;
 
-namespace Clockwork
+namespace ClockworkFramework
 {
     public class Config
     {

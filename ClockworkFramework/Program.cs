@@ -1,8 +1,9 @@
 ﻿using System.Text.RegularExpressions;
+using System.Reflection;
 using Newtonsoft.Json;
 using ClockworkFramework.Core;
 
-namespace Clockwork
+namespace ClockworkFramework
 {
     /*
     Ideas:
@@ -13,7 +14,7 @@ namespace Clockwork
     {
         private static Config config = new Config();
         private static Dictionary<Library, List<Hooks>> hooks = new Dictionary<Library, List<Hooks>>();
-        private static List<IClockworkTask> tasks = new List<IClockworkTask>();
+        private static List<IClockworkTaskBase> tasks = new List<IClockworkTaskBase>();
 
         private static void Main(string[] args)
         {
@@ -53,7 +54,8 @@ namespace Clockwork
         {
             public Library Source { get; set; }
             public Type TaskType { get; set; }
-            public IClockworkTask Instance { get; set; }
+            public IClockworkTaskBase Instance { get; set; }
+            public MethodInfo TaskMethod { get; set; }
             public Task RunningTask { get; set; }
             public CancellationTokenSource CancellationToken { get; set; } = new CancellationTokenSource();
         }
@@ -65,10 +67,11 @@ namespace Clockwork
             List<TaskConfiguration> tasks = new List<TaskConfiguration>();
             foreach (Library library in config.Libraries)
             {
-                tasks.AddRange(TaskLoader.LoadLibraryTasks(library).Select(t => new TaskConfiguration
+                tasks.AddRange(TaskLoader.LoadLibraryTasks(library).SelectMany(t => TaskLoader.LoadTaskMethodsFromClassType(t)).Select(m => new TaskConfiguration
                 {
                     Source = library,
-                    TaskType = t,
+                    TaskType = m.DeclaringType,
+                    TaskMethod = m,
                 }));
                 
                 hooks[library] = TaskLoader.GetTypesOfTypeFromAssembly(library.Assembly, typeof(Hooks)).Select(h => (Hooks)Activator.CreateInstance(h)).ToList();
@@ -77,15 +80,19 @@ namespace Clockwork
             if (tasks.Count == 0)
             {
                 Utilities.WriteToConsoleWithColor($"No external tasks loaded. Loading internal example tasks instead.", ConsoleColor.Yellow);
-                tasks.AddRange(TaskLoader.LoadExampleTasks().Select(t => new TaskConfiguration { TaskType = t }));
+                tasks.AddRange(TaskLoader.LoadExampleTasks().Select(m => new TaskConfiguration
+                { 
+                    TaskType = m.DeclaringType,
+                    TaskMethod = m,
+                }));
             }
 
             foreach (TaskConfiguration task in tasks)
             {
-                task.Instance = (IClockworkTask)Activator.CreateInstance(task.TaskType);
-                Console.WriteLine($"Found and registered task {task.TaskType.FullName}");
+                task.Instance = (IClockworkTaskBase)Activator.CreateInstance(task.TaskType);
+                Console.WriteLine($"Found and registered task {task.TaskType.Name}.{task.TaskMethod.Name}");
                 
-                task.RunningTask = TaskRunner.RunTaskPeriodicAsync(task.Instance, task.CancellationToken.Token, ex => CallHook(h => h.GlobalCatch(ex)));
+                task.RunningTask = TaskRunner.RunTaskPeriodicAsync(task.Instance, task.TaskMethod, task.CancellationToken.Token, ex => CallHook(h => h.GlobalCatch(ex)));
                 runningTasks.Add(task.RunningTask);
             }
 
@@ -137,16 +144,20 @@ namespace Clockwork
                                 //Reload tasks for library
                                 foreach (Type taskType in TaskLoader.LoadLibraryTasks(library, true))
                                 {
-                                    TaskConfiguration task = new TaskConfiguration
+                                    foreach (MethodInfo taskMethod in TaskLoader.LoadLibraryTasks(library).SelectMany(t => TaskLoader.LoadTaskMethodsFromClassType(t)))
                                     {
-                                        Source = library,
-                                        TaskType = taskType,
-                                        Instance = (IClockworkTask)Activator.CreateInstance(taskType),
-                                    };
+                                        TaskConfiguration task = new TaskConfiguration
+                                        {
+                                            Source = library,
+                                            TaskType = taskType,
+                                            TaskMethod = taskMethod,
+                                            Instance = (IClockworkTaskBase)Activator.CreateInstance(taskType),
+                                        };
 
-                                    task.RunningTask = TaskRunner.RunTaskPeriodicAsync(task.Instance, task.CancellationToken.Token, ex => CallHook(h => h.GlobalCatch(ex)));
-                                    tasks.Add(task);
-                                    runningTasks.Add(task.RunningTask);
+                                        task.RunningTask = TaskRunner.RunTaskPeriodicAsync(task.Instance, task.TaskMethod, task.CancellationToken.Token, ex => CallHook(h => h.GlobalCatch(ex)));
+                                        tasks.Add(task);
+                                        runningTasks.Add(task.RunningTask);
+                                    }
                                 }
 
                                 //Reload hooks for library

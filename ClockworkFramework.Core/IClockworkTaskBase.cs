@@ -1,11 +1,9 @@
+
 namespace ClockworkFramework.Core
 {
-    public interface IClockworkTask
+    public interface IClockworkTaskBase
     {
-        Interval Interval { get; }
-
         public void Setup() { }
-        public void Run();
         public void Teardown() { }
 
         public void Catch(Exception e)

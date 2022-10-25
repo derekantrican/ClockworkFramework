@@ -1,14 +1,17 @@
+using System.Reflection;
 using ClockworkFramework.Core;
 
-namespace Clockwork
+namespace ClockworkFramework
 {
     public class TaskRunner
     {
-        public static async Task RunTaskPeriodicAsync(IClockworkTask task, CancellationToken cancellationToken, Action<Exception> exceptionHandler = null)
+        public static async Task RunTaskPeriodicAsync(IClockworkTaskBase taskBase, MethodInfo taskMethod, CancellationToken cancellationToken, Action<Exception> exceptionHandler = null)
         {
+            Interval interval = (taskMethod.GetCustomAttribute(typeof(IntervalAttribute)) as IntervalAttribute).Interval;
+
             while (true)
             {
-                await Task.Delay(task.Interval.CalculateTimeToNext(DateTime.Now), cancellationToken);
+                await Task.Delay(interval.CalculateTimeToNext(DateTime.Now), cancellationToken);
 
                 if (cancellationToken.IsCancellationRequested)
                 {
@@ -19,31 +22,31 @@ namespace Clockwork
                 {
                     RunWithCatch(() =>
                     {
-                        RunTaskMethod(task, () => task.Setup(), "setup");
-                        RunTaskMethod(task, () => task.Run());
-                        RunTaskMethod(task, () => task.Teardown(), "teardown");
+                        RunTaskMethod(taskBase, taskMethod, () => taskBase.Setup(), "setup");
+                        RunTaskMethod(taskBase, taskMethod, () => taskMethod.Invoke(taskBase, null));
+                        RunTaskMethod(taskBase, taskMethod, () => taskBase.Teardown(), "teardown");
                     },
                     ex => 
                     {
-                        Console.WriteLine($"[{DateTime.Now}] Task '{task}' catch failed: ${ex.Message}\n{ex.StackTrace}");
+                        Console.WriteLine($"[{DateTime.Now}] Task '{taskMethod.Name}' catch failed: ${ex.Message}\n{ex.StackTrace}");
                         exceptionHandler?.Invoke(ex);
                     });
                 });
             }
         }
 
-        private static void RunTaskMethod(IClockworkTask task, Action action, string methodName = "")
+        private static void RunTaskMethod(IClockworkTaskBase taskBase, MethodInfo taskMethod, Action action, string methodName = "")
         {
-            Console.WriteLine($"[{DateTime.Now}] Running task '{task}' {methodName}");
+            Console.WriteLine($"[{DateTime.Now}] Running task '{taskMethod.Name}' {methodName}");
 
             RunWithCatch(() => 
             {
                 action();
-                Console.WriteLine($"[{DateTime.Now}] Task '{task}' {methodName} completed successfully");
+                Console.WriteLine($"[{DateTime.Now}] Task '{taskMethod.Name}' {methodName} completed successfully");
             }, ex =>
             {
-                Console.WriteLine($"[{DateTime.Now}] Task '{task}' {methodName} failed");
-                task.Catch(ex);
+                Console.WriteLine($"[{DateTime.Now}] Task '{taskMethod.Name}' {methodName} failed");
+                taskBase.Catch(ex);
             });
         }
 
