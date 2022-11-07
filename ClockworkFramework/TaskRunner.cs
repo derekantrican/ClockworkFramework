@@ -11,7 +11,7 @@ namespace ClockworkFramework
 
             while (true)
             {
-                await Task.Delay(interval.CalculateTimeToNext(DateTime.Now), cancellationToken);
+                await Task.Delay(interval.CalculateTimeToNext(DateTime.UtcNow), cancellationToken);
 
                 if (cancellationToken.IsCancellationRequested)
                 {
