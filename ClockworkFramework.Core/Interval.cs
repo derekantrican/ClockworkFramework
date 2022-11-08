@@ -73,36 +73,48 @@ namespace ClockworkFramework.Core
 
         public TimeSpan CalculateTimeToNext(DateTime fromDateTime)
         {
-            DateTime next;
+            DateTime? next = null;
             switch (TimeType)
             {
                 case TimeType.Second:
-                    return fromDateTime.AddSeconds(Frequency) - fromDateTime;
+                    next = fromDateTime.AddSeconds(Frequency);
+                    break;
                 case TimeType.Minute:
-                    return fromDateTime.AddMinutes(Frequency) - fromDateTime;
+                    next = fromDateTime.AddMinutes(Frequency);
+                    break;
                 case TimeType.Hour:
-                    return fromDateTime.AddHours(Frequency) - fromDateTime;
+                    next = fromDateTime.AddHours(Frequency);
+                    break;
                 case TimeType.Day:
                     next = fromDateTime.AddDays(Frequency);
-                    return new DateTime(next.Year, next.Month, next.Day, Hour, Minute, 0) - fromDateTime;
+                    next = new DateTime(next.Value.Year, next.Value.Month, next.Value.Day, Hour, Minute, 0);
+                    break;
                 case TimeType.Week:
                     next = fromDateTime.AddDays(((int)DayOfWeek - (int)fromDateTime.DayOfWeek + 7) % 7);
                     
                     if (Frequency > 1)
                     {
-                        next = next.AddDays(7 * Frequency);
+                        next = next.Value.AddDays(7 * Frequency);
                     }
 
-                    return new DateTime(next.Year, next.Month, next.Day, Hour, Minute, 0) - fromDateTime;
+                    next = new DateTime(next.Value.Year, next.Value.Month, next.Value.Day, Hour, Minute, 0);
+                    break;
                 case TimeType.Month:
                     //Todo: not currently supported
                     break;
                 case TimeType.Year:
                     next = fromDateTime.AddYears(Frequency);
-                    return new DateTime(next.Year, next.Month, next.Day, Hour, Minute, 0) - fromDateTime;
+                    next = new DateTime(next.Value.Year, next.Value.Month, next.Value.Day, Hour, Minute, 0);
+                    break;
             }
 
-            throw new Exception("Unable to calculate next occurence");
+            if (!next.HasValue)
+            {
+                throw new Exception("Unable to calculate next occurence");
+            }
+
+            //Using UTC converts here gives us the correct TimeSpan even if there is a DST change in between
+            return TimeZoneInfo.ConvertTimeToUtc(next.Value) - TimeZoneInfo.ConvertTimeToUtc(fromDateTime);
         }
     }
 }
