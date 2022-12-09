@@ -144,7 +144,7 @@ namespace ClockworkFramework
                                 //Reload tasks for library
                                 foreach (Type taskType in TaskLoader.LoadLibraryTasks(library, true))
                                 {
-                                    foreach (MethodInfo taskMethod in TaskLoader.LoadLibraryTasks(library).SelectMany(t => TaskLoader.LoadTaskMethodsFromClassType(t)))
+                                    foreach (MethodInfo taskMethod in TaskLoader.LoadTaskMethodsFromClassType(taskType))
                                     {
                                         TaskConfiguration task = new TaskConfiguration
                                         {
