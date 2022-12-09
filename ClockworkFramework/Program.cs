@@ -164,7 +164,9 @@ namespace ClockworkFramework
                                 hooks[library] = TaskLoader.GetTypesOfTypeFromAssembly(library.Assembly, typeof(Hooks)).Select(h => (Hooks)Activator.CreateInstance(h)).ToList();
 
                                 string newCommit = Regex.Match(result.StdOut, @"(?<commit1>[a-z0-9]*)\.\.(?<commit2>[a-z0-9]*)").Groups["commit2"].Value;
-                                CallHook(h => h.LibraryUpdated(library.Name, $"Library {library.Name} has been updated to {newCommit}"));
+                                string commitMsg = Utilities.RunProcess($"git show --pretty=format:\"%B\" --no-patch {newCommit}", library.Path).StdOut.Trim();
+
+                                CallHook(h => h.LibraryUpdated(library.Name, $"Library {library.Name} has been updated to {newCommit} (\"{commitMsg}\")"));
                             }
                         });
 
