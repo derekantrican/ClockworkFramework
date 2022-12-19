@@ -154,6 +154,8 @@ namespace ClockworkFramework
                                             Instance = (IClockworkTaskBase)Activator.CreateInstance(taskType),
                                         };
 
+                                        Console.WriteLine($"Found and registered task {task.TaskType.Name}.{task.TaskMethod.Name}");
+
                                         task.RunningTask = TaskRunner.RunTaskPeriodicAsync(task.Instance, task.TaskMethod, task.CancellationToken.Token, ex => CallHook(h => h.GlobalCatch(ex)));
                                         tasks.Add(task);
                                         runningTasks.Add(task.RunningTask);
