@@ -86,25 +86,42 @@ namespace ClockworkFramework.Core
                     next = fromDateTime.AddHours(Frequency);
                     break;
                 case TimeType.Day:
-                    next = fromDateTime.AddDays(Frequency);
+                    next = fromDateTime;
                     next = new DateTime(next.Value.Year, next.Value.Month, next.Value.Day, Hour, Minute, 0);
-                    break;
-                case TimeType.Week:
-                    next = fromDateTime.AddDays(((int)DayOfWeek - (int)fromDateTime.DayOfWeek + 7) % 7);
-                    
-                    if (Frequency > 1)
+
+                    if (Frequency != 1 || next < fromDateTime) //Only shift forward if the task repeats less frequently than everyday or the time has already passed
                     {
-                        next = next.Value.AddDays(7 * Frequency);
+                        next = next.Value.AddDays(Frequency);
                     }
 
+                    break;
+                case TimeType.Week:
+                    next = fromDateTime;
                     next = new DateTime(next.Value.Year, next.Value.Month, next.Value.Day, Hour, Minute, 0);
+
+                    if (fromDateTime.DayOfWeek != DayOfWeek || next < fromDateTime) //Only shift forward if the DayOfWeek occurrence is not today or the time has already passed
+                    {
+                        next = fromDateTime.AddDays(((int)DayOfWeek - (int)fromDateTime.DayOfWeek + 7) % 7);
+
+                        if (Frequency > 1)
+                        {
+                            next = next.Value.AddDays(7 * Frequency);
+                        }
+                    }
+
                     break;
                 case TimeType.Month:
                     //Todo: not currently supported
                     break;
                 case TimeType.Year:
-                    next = fromDateTime.AddYears(Frequency);
+                    next = fromDateTime;
                     next = new DateTime(next.Value.Year, next.Value.Month, next.Value.Day, Hour, Minute, 0);
+
+                    if (next < fromDateTime) //Only shift forward if the time has already passed
+                    {
+                        next = fromDateTime.AddYears(Frequency);
+                    }
+
                     break;
             }
 
