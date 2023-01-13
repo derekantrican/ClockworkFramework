@@ -28,7 +28,7 @@ namespace ClockworkFramework
         {
             Exception ex = (Exception)e.ExceptionObject;
             Utilities.WriteToConsoleWithColor($"Unhandled Exception encountered: {ex.Message}\n{ex.StackTrace}", ConsoleColor.Red);
-            CallHook(h => h.GlobalCatch(ex));
+            CallHook(h => h.GlobalCatch(ex, e.IsTerminating));
         }
 
         private static void LoadConfig()
