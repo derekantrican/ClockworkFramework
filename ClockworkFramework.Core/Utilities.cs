@@ -137,5 +137,17 @@ namespace ClockworkFramework.Core
                 ExitCode = p.ExitCode,
             };
         }
+
+        public static void RunWithCatch(Action action, Action<Exception> onException)
+        {
+            try
+            {
+                action();
+            }
+            catch (Exception e)
+            {
+                onException(e);
+            }
+        }
     }
 }

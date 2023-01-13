@@ -20,7 +20,7 @@ namespace ClockworkFramework
 
                 await Task.Run(() =>
                 {
-                    RunWithCatch(() =>
+                    Utilities.RunWithCatch(() =>
                     {
                         RunTaskMethod(taskBase, taskMethod, () => taskBase.Setup(), "setup");
                         RunTaskMethod(taskBase, taskMethod, () => taskMethod.Invoke(taskBase, null));
@@ -39,7 +39,7 @@ namespace ClockworkFramework
         {
             Console.WriteLine($"[{DateTime.Now}] Running task '{taskMethod.Name}' {methodName}");
 
-            RunWithCatch(() => 
+            Utilities.RunWithCatch(() => 
             {
                 action();
                 Console.WriteLine($"[{DateTime.Now}] Task '{taskMethod.Name}' {methodName} completed successfully");
@@ -48,18 +48,6 @@ namespace ClockworkFramework
                 Console.WriteLine($"[{DateTime.Now}] Task '{taskMethod.Name}' {methodName} failed");
                 taskBase.Catch(ex);
             });
-        }
-
-        private static void RunWithCatch(Action action, Action<Exception> onException)
-        {
-            try
-            {
-                action();
-            }
-            catch (Exception e)
-            {
-                onException(e);
-            }
         }
     }
 }

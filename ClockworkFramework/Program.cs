@@ -16,12 +16,12 @@ namespace ClockworkFramework
         private static Dictionary<Library, List<Hooks>> hooks = new Dictionary<Library, List<Hooks>>();
         private static List<IClockworkTaskBase> tasks = new List<IClockworkTaskBase>();
 
-        private static void Main(string[] args)
+        private static async Task Main(string[] args)
         {
             AppDomain.CurrentDomain.UnhandledException += UnhandledExceptionHandler;
             //Todo: support a "verbosity" arg that won't output setup, teardown, etc messages
             LoadConfig();
-            RegisterAndRunTasks().Wait();
+            await RegisterAndRunTasks();
         }
 
         private static void UnhandledExceptionHandler(object sender, UnhandledExceptionEventArgs e) 
@@ -109,7 +109,7 @@ namespace ClockworkFramework
                             foreach (Library library in config.Libraries)
                             {
                                 Console.WriteLine($"Updating library {library.Name}");
-
+                                
                                 var result = Utilities.RunProcess("git pull", library.Path);
                                 if (result.ExitCode != 0)
                                 {
@@ -188,7 +188,7 @@ namespace ClockworkFramework
         {
             foreach (Hooks hook in hooks.SelectMany(h => h.Value))
             {
-                hookAction?.Invoke(hook);
+                Utilities.RunWithCatch(() => hookAction?.Invoke(hook), ex => Console.WriteLine($"[{DateTime.Now}] Hook {hookAction} threw an exception: ${ex.Message}\n{ex.StackTrace}"));
             }
         }
     }
