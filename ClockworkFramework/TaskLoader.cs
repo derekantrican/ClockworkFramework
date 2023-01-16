@@ -107,6 +107,8 @@ namespace ClockworkFramework
             return exampleClasses.SelectMany(t => LoadTaskMethodsFromClassType(t));
         }
 
+        //Todo: rework some of the below (loading TaskMethods *then* filtering to ones on IClockworkTaskBase classes) so we can output a warning
+        //  for [TaskMethod]s that are on a class that doesn't inherit from IClockworkTaskBase
         public static IEnumerable<MethodInfo> LoadTaskMethodsFromClassType(Type type)
         {
             return type.GetMethods().Where(m => m.GetCustomAttribute(typeof(TaskMethodAttribute)) != null);
