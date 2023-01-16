@@ -131,7 +131,7 @@ namespace ClockworkFramework
                                 //Unload tasks for library
                                 foreach (TaskConfiguration task in tasks.Where(t => t.Source == library).ToList())
                                 {
-                                    Utilities.WriteToConsoleWithColor($"Canceling task {task.Instance}", ConsoleColor.DarkGreen);
+                                    Utilities.WriteToConsoleWithColor($"Canceling task {task.TaskType.Name}.{task.TaskMethod.Name}", ConsoleColor.DarkGreen);
                                     task.CancellationToken.Cancel();
                                     tasks.Remove(task);
                                 }
