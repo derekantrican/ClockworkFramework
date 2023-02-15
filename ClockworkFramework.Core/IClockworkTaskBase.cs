@@ -9,7 +9,7 @@ namespace ClockworkFramework.Core
         public void Catch(Exception e)
         {
             Console.WriteLine("Exception thrown in task:");
-            Utilities.ProcessFullException(e, ex => Console.WriteLine($"{e.Message}\n\n{e.StackTrace}"));
+            Utilities.ProcessFullException(e, ex => Console.WriteLine($"{ex.Message}\n\n{ex.StackTrace}"));
         }
     }
 }
