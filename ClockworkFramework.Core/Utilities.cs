@@ -149,5 +149,22 @@ namespace ClockworkFramework.Core
                 onException(e);
             }
         }
+
+        public static void ProcessFullException(Exception ex, Action<Exception> exceptionAction)
+        {
+            exceptionAction?.Invoke(ex);
+
+            if (ex is AggregateException aggregateException)
+            {
+                foreach (Exception innerException in aggregateException.InnerExceptions)
+                {
+                    ProcessFullException(innerException, exceptionAction);
+                }
+            }
+            else if (ex.InnerException != null)
+            {
+                ProcessFullException(ex.InnerException, exceptionAction);
+            }
+        }
     }
 }
