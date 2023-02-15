@@ -28,7 +28,7 @@ namespace ClockworkFramework
         {
             Exception ex = (Exception)e.ExceptionObject;
             Utilities.WriteToConsoleWithColor($"Unhandled Exception encountered: {ex.Message}\n{ex.StackTrace}", ConsoleColor.Red);
-            CallHook(h => h.GlobalCatch(ex, e.IsTerminating));
+            CallHook(h => h.SystemExceptionHook(ex, e.IsTerminating));
         }
 
         private static void LoadConfig()
@@ -92,7 +92,8 @@ namespace ClockworkFramework
                 task.Instance = (IClockworkTaskBase)Activator.CreateInstance(task.TaskType);
                 Console.WriteLine($"Found and registered task {task.TaskType.Name}.{task.TaskMethod.Name}");
                 
-                task.RunningTask = TaskRunner.RunTaskPeriodicAsync(task.Instance, task.TaskMethod, task.CancellationToken.Token, ex => CallHook(h => h.GlobalCatch(ex)));
+                task.RunningTask = TaskRunner.RunTaskPeriodicAsync(task.Instance, task.TaskMethod, task.CancellationToken.Token,
+                    ex => CallHook(h => h.SystemExceptionHook(ex)), ex => CallHook(h => h.GlobalTaskExceptionHook(task.TaskType, task.TaskMethod, ex)));
                 runningTasks.Add(task.RunningTask);
             }
 
@@ -156,7 +157,8 @@ namespace ClockworkFramework
 
                                         Console.WriteLine($"Found and registered task {task.TaskType.Name}.{task.TaskMethod.Name}");
 
-                                        task.RunningTask = TaskRunner.RunTaskPeriodicAsync(task.Instance, task.TaskMethod, task.CancellationToken.Token, ex => CallHook(h => h.GlobalCatch(ex)));
+                                        task.RunningTask = TaskRunner.RunTaskPeriodicAsync(task.Instance, task.TaskMethod, task.CancellationToken.Token,
+                                            ex => CallHook(h => h.SystemExceptionHook(ex)), ex => CallHook(h => h.GlobalTaskExceptionHook(task.TaskType, task.TaskMethod, ex)));
                                         tasks.Add(task);
                                         runningTasks.Add(task.RunningTask);
                                     }

@@ -5,7 +5,8 @@ namespace ClockworkFramework
 {
     public class TaskRunner
     {
-        public static async Task RunTaskPeriodicAsync(IClockworkTaskBase taskBase, MethodInfo taskMethod, CancellationToken cancellationToken, Action<Exception> exceptionHandler = null)
+        public static async Task RunTaskPeriodicAsync(IClockworkTaskBase taskBase, MethodInfo taskMethod, CancellationToken cancellationToken,
+            Action<Exception> exceptionHandler = null, Action<Exception> taskExceptionHandler = null)
         {
             Interval interval = (taskMethod.GetCustomAttribute(typeof(IntervalAttribute)) as IntervalAttribute).Interval;
 
@@ -22,9 +23,9 @@ namespace ClockworkFramework
                 {
                     Utilities.RunWithCatch(() =>
                     {
-                        RunTaskMethod(taskBase, taskMethod, () => taskBase.Setup(), "setup");
-                        RunTaskMethod(taskBase, taskMethod, () => taskMethod.Invoke(taskBase, null));
-                        RunTaskMethod(taskBase, taskMethod, () => taskBase.Teardown(), "teardown");
+                        RunTaskMethod(taskBase, taskMethod, () => taskBase.Setup(), "setup", taskExceptionHandler);
+                        RunTaskMethod(taskBase, taskMethod, () => taskMethod.Invoke(taskBase, null), additionalTaskExceptionHandler: taskExceptionHandler);
+                        RunTaskMethod(taskBase, taskMethod, () => taskBase.Teardown(), "teardown", taskExceptionHandler);
                     },
                     ex => 
                     {
@@ -35,7 +36,7 @@ namespace ClockworkFramework
             }
         }
 
-        private static void RunTaskMethod(IClockworkTaskBase taskBase, MethodInfo taskMethod, Action action, string methodName = "")
+        private static void RunTaskMethod(IClockworkTaskBase taskBase, MethodInfo taskMethod, Action action, string methodName = "", Action<Exception> additionalTaskExceptionHandler = null)
         {
             Console.WriteLine($"[{DateTime.Now}] Running task '{taskMethod.Name}' {methodName}");
 
@@ -47,6 +48,7 @@ namespace ClockworkFramework
             {
                 Console.WriteLine($"[{DateTime.Now}] Task '{taskMethod.Name}' {methodName} failed");
                 taskBase.Catch(ex);
+                additionalTaskExceptionHandler?.Invoke(ex);
             });
         }
     }
