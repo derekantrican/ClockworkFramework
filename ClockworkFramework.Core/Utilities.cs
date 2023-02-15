@@ -146,7 +146,7 @@ namespace ClockworkFramework.Core
             }
             catch (Exception e)
             {
-                onException(e);
+                onException?.Invoke(e);
             }
         }
 
