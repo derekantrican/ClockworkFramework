@@ -150,6 +150,18 @@ namespace ClockworkFramework.Core
             }
         }
 
+        public static T RunWithCatch<T>(Func<T> action, Func<Exception, T> onException)
+        {
+            try
+            {
+                return action();
+            }
+            catch (Exception e)
+            {
+                return onException != null ? onException(e) : default(T);
+            }
+        }
+
         public static void ProcessFullException(Exception ex, Action<Exception> exceptionAction)
         {
             exceptionAction?.Invoke(ex);
