@@ -140,6 +140,9 @@ namespace ClockworkFramework
                                 //Unload hooks for library
                                 hooks.Remove(library);
 
+                                //Reload hooks for library
+                                hooks[library] = TaskLoader.GetTypesOfTypeFromAssembly(library.Assembly, typeof(Hooks)).Select(h => (Hooks)Activator.CreateInstance(h)).ToList();
+
                                 Utilities.WriteToConsoleWithColor("Loading new version of library tasks", ConsoleColor.DarkGreen);
 
                                 //Reload tasks for library
@@ -163,9 +166,6 @@ namespace ClockworkFramework
                                         runningTasks.Add(task.RunningTask);
                                     }
                                 }
-
-                                //Reload hooks for library
-                                hooks[library] = TaskLoader.GetTypesOfTypeFromAssembly(library.Assembly, typeof(Hooks)).Select(h => (Hooks)Activator.CreateInstance(h)).ToList();
 
                                 string newCommit = Regex.Match(result.StdOut, @"(?<commit1>[a-z0-9]*)\.\.(?<commit2>[a-z0-9]*)").Groups["commit2"].Value;
                                 string commitMsg = Utilities.RunProcess($"git show --pretty=format:\"%B\" --no-patch {newCommit}", library.Path).StdOut.Trim();
