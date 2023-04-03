@@ -44,23 +44,36 @@ namespace ClockworkFramework.Core
         public static string ApiRequest(string url, HttpMethod method, Dictionary<string, string> headers = null,
                                         Dictionary<string, string> parameters = null, HttpContent content = null) 
         {
+            return ApiRequest(new ApiRequestParams
+            {
+                Url = url,
+                Method = method,
+                Headers = headers,
+                Parameters = parameters,
+                Content = content,
+            });
+        }
+
+        public static string ApiRequest(ApiRequestParams parameters)
+        {
             using (var client = new HttpClient())
             {
-                if (parameters != null)
+                string url = parameters.Url;
+                if (parameters.Parameters != null)
                 {
-                    url += $"?{string.Join("&", parameters.Select(param => $"{param.Key}={Uri.EscapeDataString(param.Value)}"))}";
+                    url += $"?{string.Join("&", parameters.Parameters.Select(param => $"{param.Key}={Uri.EscapeDataString(param.Value)}"))}";
                 }
 
-                var request = new HttpRequestMessage(method, url);
-                if (headers != null)
+                var request = new HttpRequestMessage(parameters.Method, url);
+                if (parameters.Headers != null)
                 {
-                    foreach (var header in headers)
+                    foreach (var header in parameters.Headers)
                     {
                         request.Headers.Add(header.Key, header.Value);
                     }
                 }
 
-                request.Content = content;
+                request.Content = parameters.Content;
 
                 var response = client.Send(request);
                 using (var stream = response.Content.ReadAsStream())
