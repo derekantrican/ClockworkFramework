@@ -114,8 +114,16 @@ namespace ClockworkFramework
                                 var result = Utilities.RunProcess("git pull", library.Path);
                                 if (result.ExitCode != 0)
                                 {
-                                    Utilities.WriteToConsoleWithColor($"Failed to update library {library.Name}. Log output below.\n\n{result.StdOut}\n\n{result.StdErr}", ConsoleColor.Red);
-                                    CallHook(h => h.Warning($"'git pull' failed for library {library.Name}. If this is not a git repository, turn off updateRepository in config.json"));
+                                    Utilities.WriteToConsoleWithColor($"Failed to update library {library.Name} ({result.ExitCode}). Log output below.\n\n{result.StdOut}\n\n{result.StdErr}", ConsoleColor.Red);
+
+                                    string message = $"'git pull' failed for library {library.Name}. If this is not a git repository, turn off updateRepository in config.json";
+                                    if (result.StdErr.Contains("not a git repository"))
+                                    {
+                                        message += " If this is not a git repository, turn off updateRepository in config.json";
+                                    }
+
+                                    CallHook(h => h.Warning(message));
+
                                     continue;
                                 }
 
