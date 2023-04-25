@@ -116,7 +116,7 @@ namespace ClockworkFramework
                                 {
                                     Utilities.WriteToConsoleWithColor($"Failed to update library {library.Name} ({result.ExitCode}). Log output below.\n\n{result.StdOut}\n\n{result.StdErr}", ConsoleColor.Red);
 
-                                    string message = $"'git pull' failed for library {library.Name}. If this is not a git repository, turn off updateRepository in config.json";
+                                    string message = $"'git pull' failed for library {library.Name}.";
                                     if (result.StdErr.Contains("not a git repository"))
                                     {
                                         message += " If this is not a git repository, turn off updateRepository in config.json";
