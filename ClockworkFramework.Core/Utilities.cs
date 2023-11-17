@@ -44,7 +44,7 @@ namespace ClockworkFramework.Core
         public static string ApiRequest(string url, HttpMethod method, Dictionary<string, string> headers = null,
                                         Dictionary<string, string> parameters = null, HttpContent content = null) 
         {
-            return ApiRequest(new ApiRequestParams
+            var response = ApiRequest(new ApiRequestParams
             {
                 Url = url,
                 Method = method,
@@ -52,9 +52,17 @@ namespace ClockworkFramework.Core
                 Parameters = parameters,
                 Content = content,
             });
+
+            using (var stream = response.Content.ReadAsStream())
+            {
+                using (var streamReader = new StreamReader(stream))
+                {
+                    return streamReader.ReadToEnd();
+                }
+            }
         }
 
-        public static string ApiRequest(ApiRequestParams parameters)
+        public static HttpResponseMessage ApiRequest(ApiRequestParams parameters)
         {
             using (var client = new HttpClient())
             {
@@ -75,14 +83,7 @@ namespace ClockworkFramework.Core
 
                 request.Content = parameters.Content;
 
-                var response = client.Send(request);
-                using (var stream = response.Content.ReadAsStream())
-                {
-                    using (var streamReader = new StreamReader(stream))
-                    {
-                        return streamReader.ReadToEnd();
-                    }
-                }
+                return client.Send(request);
             }
         }
 
