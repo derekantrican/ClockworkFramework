@@ -16,7 +16,7 @@ namespace ClockworkFramework.Core
         //Todo: simplify interval constructors somehow (and therefore: attribute)
         //Todo: allow for "Interval.Once" to only run a task one time after startup
 
-        public Interval(TimeType timeType, int frequency, int hour, int minute)
+        public Interval(TimeType timeType, int frequency, int hour, int minute, string timezone = null)
         {
             if (timeType == TimeType.Week)
             {
@@ -35,6 +35,7 @@ namespace ClockworkFramework.Core
             Frequency = frequency;
             Hour = hour;
             Minute = minute;
+            Timezone = timezone;
         }
 
         public Interval(TimeType timeType, int frequency)
@@ -56,13 +57,14 @@ namespace ClockworkFramework.Core
             Frequency = frequency;
         }
 
-        public Interval(DayOfWeek dayOfWeek, int frequency, int hour, int minute)
+        public Interval(DayOfWeek dayOfWeek, int frequency, int hour, int minute, string timezone = null)
         {
             TimeType = TimeType.Week;
             DayOfWeek = dayOfWeek;
             Frequency = frequency;
             Hour = hour;
             Minute = minute;
+            Timezone = timezone;
         }
 
         public TimeType TimeType { get; }
@@ -70,6 +72,7 @@ namespace ClockworkFramework.Core
         public DayOfWeek DayOfWeek { get; }
         public int Hour { get; }
         public int Minute { get; }
+        public string Timezone { get; }
 
         public TimeSpan CalculateTimeToNext(DateTime fromDateTime)
         {
@@ -128,6 +131,26 @@ namespace ClockworkFramework.Core
             if (!next.HasValue)
             {
                 throw new Exception("Unable to calculate next occurence");
+            }
+
+            if (!string.IsNullOrEmpty(Timezone))
+            {
+                try
+                {
+                    //This is a rudimentary first version. Some potential problems that might arise,
+                    //causing this to provide inaccurate results:
+                    // - At the bottom, we attempt to account for DST changes, but by converting timezones,
+                    //   I wouldn't be surprised if there were multiple DST or similar changes in between
+                    // - Etc. (Timezones can be VERY weird. This could fail in a variety of ways)
+
+                    TimeZoneInfo timeZoneInfo = TimeZoneInfo.FindSystemTimeZoneById(Timezone); //I could use https://github.com/mattjohnsonpint/TimeZoneConverter to support IANA timezones
+
+                    next = TimeZoneInfo.ConvertTime(next.Value, timeZoneInfo);
+                }
+                catch (TimeZoneNotFoundException)
+                {
+                    throw new Exception($"Unrecognized timezone '{Timezone}'");
+                }
             }
 
             //Using UTC converts here gives us the correct TimeSpan even if there is a DST change in between
