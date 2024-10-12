@@ -109,6 +109,11 @@ namespace ClockworkFramework
                         {
                             foreach (Library library in config.Libraries)
                             {
+                                if (!library.UpdateRepository)
+                                {
+                                    continue;
+                                }
+
                                 Console.WriteLine($"Updating library {library.Name}");
                                 
                                 var result = Utilities.RunProcess("git pull", library.Path);
