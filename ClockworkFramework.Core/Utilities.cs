@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Text;
 using Newtonsoft.Json;
 
@@ -95,7 +96,7 @@ namespace ClockworkFramework.Core
             public bool TimedOut { get; set; }
         }
 
-        public static ProcessResult RunProcess(string process, string location = null, TimeSpan? timeout = null)
+        public static ProcessResult RunProcess(string executable, string arguments, string location = null, TimeSpan? timeout = null)
         {
             StringBuilder stdOutStringBuilder = new StringBuilder();
             StringBuilder stdErrStringBuilder = new StringBuilder();
@@ -103,12 +104,18 @@ namespace ClockworkFramework.Core
             object stdOutSyncLock = new object();
             object stdErrSyncLock = new object();
 
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                arguments = $"/c {executable} {arguments}";
+                executable = "cmd.exe";
+            }
+
             Process p = new Process
             {
                 StartInfo = new ProcessStartInfo
                 {
-                    FileName = "cmd.exe", //Todo: need to update this for linux
-                    Arguments = $"/c {process}",
+                    FileName = executable,
+                    Arguments = arguments,
                     WorkingDirectory = location,
                     RedirectStandardError = true,
                     RedirectStandardOutput = true,
@@ -141,26 +148,24 @@ namespace ClockworkFramework.Core
             try
             {
                 p.Start();
+
+                p.BeginOutputReadLine();
+                p.BeginErrorReadLine();
+
+                bool success = p.WaitForExit(timeout.HasValue ? (int)timeout.Value.TotalMilliseconds : -1);
+
+                if (!success)
+                {
+                    throw new TimeoutException();
+                }
             }
             catch (Exception ex)
             {
                 //Print out the exception (for debugging purposes) and rethrow
                 Console.WriteLine(ex);
-                throw;
+                throw; //Todo: call Hooks
             }
 
-            p.BeginOutputReadLine();
-            p.BeginErrorReadLine();
-
-            bool success = p.WaitForExit(timeout.HasValue ? (int)timeout.Value.TotalMilliseconds : -1);
-
-            if (!success)
-            {
-                return new ProcessResult
-                {
-                    TimedOut = true,
-                };
-            }
 
             return new ProcessResult
             {
