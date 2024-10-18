@@ -53,7 +53,7 @@ namespace ClockworkFramework
 
             if (!Directory.Exists(binLocation) || forceRebuildIfApplicable)
             {
-                var result = Utilities.RunProcess("dotnet build", libraryLocation);
+                var result = Utilities.RunProcess("dotnet", "build", libraryLocation);
                 if (result.ExitCode != 0)
                 {
                     Utilities.WriteToConsoleWithColor($"Build of library was unsuccessful. Log output below.\n\n{result.StdOut}\n\n{result.StdErr}", ConsoleColor.Red);

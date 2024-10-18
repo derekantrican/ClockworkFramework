@@ -116,7 +116,7 @@ namespace ClockworkFramework
 
                                 Console.WriteLine($"Updating library {library.Name}");
                                 
-                                var result = Utilities.RunProcess("git pull", library.Path, TimeSpan.FromMinutes(15));
+                                var result = Utilities.RunProcess("git", "pull", library.Path, TimeSpan.FromMinutes(15));
                                 if (result.TimedOut || result.ExitCode != 0)
                                 {
                                     Utilities.WriteToConsoleWithColor($"Failed to update library {library.Name} ({result.ExitCode}). Log output below.\n\n{result.StdOut}\n\n{result.StdErr}", ConsoleColor.Red);
@@ -186,7 +186,7 @@ namespace ClockworkFramework
                                 }
 
                                 string newCommit = Regex.Match(result.StdOut, @"(?<commit1>[a-z0-9]*)\.\.(?<commit2>[a-z0-9]*)").Groups["commit2"].Value;
-                                string commitMsg = Utilities.RunProcess($"git show --pretty=format:\"%B\" --no-patch {newCommit}", library.Path).StdOut.Trim();
+                                string commitMsg = Utilities.RunProcess("git", $"show --pretty=format:\"%B\" --no-patch {newCommit}", library.Path).StdOut.Trim();
 
                                 CallHook(h => h.LibraryUpdated(library.Name, $"Library {library.Name} has been updated to {newCommit} (\"{commitMsg}\")"));
                             }
