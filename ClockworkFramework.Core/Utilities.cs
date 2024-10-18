@@ -92,6 +92,7 @@ namespace ClockworkFramework.Core
             public string StdOut { get; set; }
             public string StdErr { get; set; }
             public int ExitCode { get; set; }
+            public bool TimedOut { get; set; }
         }
 
         public static ProcessResult RunProcess(string process, string location = null, TimeSpan? timeout = null)
@@ -142,7 +143,15 @@ namespace ClockworkFramework.Core
             p.BeginOutputReadLine();
             p.BeginErrorReadLine();
 
-            p.WaitForExit(timeout.HasValue ? (int)timeout.Value.TotalMilliseconds : -1);
+            bool success = p.WaitForExit(timeout.HasValue ? (int)timeout.Value.TotalMilliseconds : -1);
+
+            if (!success)
+            {
+                return new ProcessResult
+                {
+                    TimedOut = true,
+                };
+            }
 
             return new ProcessResult
             {

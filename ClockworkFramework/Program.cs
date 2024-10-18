@@ -117,7 +117,7 @@ namespace ClockworkFramework
                                 Console.WriteLine($"Updating library {library.Name}");
                                 
                                 var result = Utilities.RunProcess("git pull", library.Path, TimeSpan.FromMinutes(15));
-                                if (result.ExitCode != 0)
+                                if (result.TimedOut || result.ExitCode != 0)
                                 {
                                     Utilities.WriteToConsoleWithColor($"Failed to update library {library.Name} ({result.ExitCode}). Log output below.\n\n{result.StdOut}\n\n{result.StdErr}", ConsoleColor.Red);
 
@@ -125,6 +125,11 @@ namespace ClockworkFramework
                                     if (result.StdErr.Contains("not a git repository"))
                                     {
                                         message += " If this is not a git repository, turn off updateRepository in config.json";
+                                    }
+
+                                    if (result.TimedOut)
+                                    {
+                                        message += " Process timed out. Perhaps it was waiting for input? Try storing your git credentials";
                                     }
 
                                     CallHook(h => h.Warning(message));
