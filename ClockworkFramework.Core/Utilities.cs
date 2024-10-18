@@ -107,7 +107,7 @@ namespace ClockworkFramework.Core
             {
                 StartInfo = new ProcessStartInfo
                 {
-                    FileName = "cmd.exe",
+                    FileName = "cmd.exe", //Todo: need to update this for linux
                     Arguments = $"/c {process}",
                     WorkingDirectory = location,
                     RedirectStandardError = true,
@@ -138,7 +138,16 @@ namespace ClockworkFramework.Core
                 }
             };
 
-            p.Start();
+            try
+            {
+                p.Start();
+            }
+            catch (Exception ex)
+            {
+                //Print out the exception (for debugging purposes) and rethrow
+                Console.WriteLine(ex);
+                throw;
+            }
 
             p.BeginOutputReadLine();
             p.BeginErrorReadLine();
