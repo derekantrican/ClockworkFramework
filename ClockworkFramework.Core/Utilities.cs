@@ -94,7 +94,7 @@ namespace ClockworkFramework.Core
             public int ExitCode { get; set; }
         }
 
-        public static ProcessResult RunProcess(string process, string location = null)
+        public static ProcessResult RunProcess(string process, string location = null, TimeSpan? timeout = null)
         {
             StringBuilder stdOutStringBuilder = new StringBuilder();
             StringBuilder stdErrStringBuilder = new StringBuilder();
@@ -142,7 +142,7 @@ namespace ClockworkFramework.Core
             p.BeginOutputReadLine();
             p.BeginErrorReadLine();
 
-            p.WaitForExit();
+            p.WaitForExit(timeout.HasValue ? (int)timeout.Value.TotalMilliseconds : -1);
 
             return new ProcessResult
             {

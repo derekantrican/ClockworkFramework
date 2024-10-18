@@ -116,7 +116,7 @@ namespace ClockworkFramework
 
                                 Console.WriteLine($"Updating library {library.Name}");
                                 
-                                var result = Utilities.RunProcess("git pull", library.Path);
+                                var result = Utilities.RunProcess("git pull", library.Path, TimeSpan.FromMinutes(15));
                                 if (result.ExitCode != 0)
                                 {
                                     Utilities.WriteToConsoleWithColor($"Failed to update library {library.Name} ({result.ExitCode}). Log output below.\n\n{result.StdOut}\n\n{result.StdErr}", ConsoleColor.Red);
