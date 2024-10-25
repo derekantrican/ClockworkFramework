@@ -93,6 +93,20 @@ namespace ClockworkFramework
                 }
             }
 
+            //Copy dependency files (specified with the attribute [DependencyFile("[FILE]")] )
+            List<string> dependencyFiles = GetTypesOfTypeFromAssembly(assemblies, typeof(IClockworkTaskBase))
+                .SelectMany(t => t.GetMethods().SelectMany(m => m.GetCustomAttributes(typeof(DependencyFileAttribute))))
+                .Cast<DependencyFileAttribute>().Select(d => d.File).ToList();
+            foreach (string dependencyFile in dependencyFiles)
+            {
+                string sourceFilePath = Path.Combine(dllFolder, dependencyFile); //Todo: this currently requires that the library also specifies <CopyToOutputDirectory> so the file is in this folder
+                string targetFilePath = Path.Combine(Directory.GetCurrentDirectory(), dependencyFile);
+                if (File.Exists(sourceFilePath))
+                {
+                    File.Copy(sourceFilePath, targetFilePath, true);
+                }
+            }
+
             return assemblies;
         }
 
