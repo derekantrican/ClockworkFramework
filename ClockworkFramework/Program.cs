@@ -8,13 +8,13 @@ namespace ClockworkFramework
     /*
     Ideas:
     - Should take adavantage of Windows Task Scheduler for an install script & to restart itself every night (in case it stops running).
-      Can reference https://github.com/derekantrican/MountainProject/blob/master/MountainProjectBot/ScheduleTasks.bat
+      Can reference https://github.com/derekantrican/MountainProject/blob/master/MountainProjectBot/ScheduleTasks.bat (however, on Linux
+      we should use a different approach)
     */
     class Program
     {
         private static Config config = new Config();
         private static Dictionary<Library, List<Hooks>> hooks = new Dictionary<Library, List<Hooks>>();
-        private static List<IClockworkTaskBase> tasks = new List<IClockworkTaskBase>();
 
         private static async Task Main(string[] args)
         {
