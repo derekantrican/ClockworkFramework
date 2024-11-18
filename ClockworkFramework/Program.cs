@@ -139,7 +139,7 @@ namespace ClockworkFramework
 
                                 Utilities.WriteToConsoleWithColor(result.StdOut, ConsoleColor.DarkGreen);
 
-                                if (result.StdOut.Contains("Already up to date"))
+                                if (string.IsNullOrWhiteSpace(result.StdOut) || result.StdOut.Contains("Already up to date"))
                                 {
                                     Utilities.WriteToConsoleWithColor("Library is already up to date", ConsoleColor.DarkGreen);
                                     continue;
