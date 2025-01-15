@@ -154,26 +154,7 @@ namespace ClockworkFramework.Core
             }
 
             //Using UTC converts here gives us the correct TimeSpan even if there is a DST change in between
-            TimeSpan timeToNext = TimeZoneInfo.ConvertTimeToUtc(next.Value) - TimeZoneInfo.ConvertTimeToUtc(fromDateTime);
-
-            //Due to some imprecision in Task.Delay (https://stackoverflow.com/a/31742754/2246411 - and other possible discrepancies
-            //in the system clock like CMOS battery or whatever), CalculateTimeToNext could result in a time just before the next run
-            //(eg 7:59:59.163 instead of 8:00:00.000). For now, we're going to accept the discrepency as "close enough", but the other
-            //problem this causes is double-triggering (eg task runs at 7:59:59.163 in less than 500 ms and therefore calculates it
-            //should run again in ~400 ms at 8:00:00.000). This solves the "double-triggering" issue by recalculating timeToNext if it
-            //is too soon
-            //Notes:
-            // - to also solve the "inaccuracy" problem (not be satisified with "close enough"), when the previously-calculated
-            //   delay has elapsed, we could check the current time against the expected time (eg 7:59:59.163 vs 8:00:00.000)
-            //   and continue with an additional delay time (eg ~400 ms) to the more precise time
-            // - note that currently it is possible to create an Interval of "every X seconds" and a low number for X will probably
-            //   cause problems with the below check (depending on how long the task takes to execute)
-            if (timeToNext.TotalSeconds < 1)
-            {
-                timeToNext = CalculateTimeToNext(fromDateTime.AddSeconds(1));
-            }
-
-            return timeToNext;
+            return TimeZoneInfo.ConvertTimeToUtc(next.Value) - TimeZoneInfo.ConvertTimeToUtc(fromDateTime);
         }
     }
 }
