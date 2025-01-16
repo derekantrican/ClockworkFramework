@@ -84,7 +84,22 @@ namespace ClockworkFramework.Core
 
                 request.Content = parameters.Content;
 
-                return client.Send(request);
+                int retries = 0;
+                while (true)
+                {
+                    HttpResponseMessage response = client.Send(request);
+                    
+                    int statusCode = (int)response.StatusCode;
+                    if (statusCode >= 500 && statusCode < 600 && retries < 3) //Retry all 5XX response status codes
+                    {
+                        retries++;
+                        Thread.Sleep(500 * retries);
+                    }
+                    else
+                    {
+                        return response;
+                    }
+                }
             }
         }
 
