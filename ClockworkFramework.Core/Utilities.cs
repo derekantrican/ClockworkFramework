@@ -67,27 +67,10 @@ namespace ClockworkFramework.Core
         {
             using (var client = new HttpClient())
             {
-                string url = parameters.Url;
-                if (parameters.Parameters != null)
-                {
-                    url += $"?{string.Join("&", parameters.Parameters.Select(param => $"{param.Key}={Uri.EscapeDataString(param.Value)}"))}";
-                }
-
-                var request = new HttpRequestMessage(parameters.Method, url);
-                if (parameters.Headers != null)
-                {
-                    foreach (var header in parameters.Headers)
-                    {
-                        request.Headers.Add(header.Key, header.Value);
-                    }
-                }
-
-                request.Content = parameters.Content;
-
                 int retries = 0;
                 while (true)
                 {
-                    HttpResponseMessage response = client.Send(request);
+                    HttpResponseMessage response = client.Send(CreateRequest(parameters));
                     
                     int statusCode = (int)response.StatusCode;
                     if (statusCode >= 500 && statusCode < 600 && retries < 3) //Retry all 5XX response status codes
@@ -101,6 +84,28 @@ namespace ClockworkFramework.Core
                     }
                 }
             }
+        }
+
+        private static HttpRequestMessage CreateRequest(ApiRequestParams parameters)
+        {
+            string url = parameters.Url;
+            if (parameters.Parameters != null)
+            {
+                url += $"?{string.Join("&", parameters.Parameters.Select(param => $"{param.Key}={Uri.EscapeDataString(param.Value)}"))}";
+            }
+
+            var request = new HttpRequestMessage(parameters.Method, url);
+            if (parameters.Headers != null)
+            {
+                foreach (var header in parameters.Headers)
+                {
+                    request.Headers.Add(header.Key, header.Value);
+                }
+            }
+
+            request.Content = parameters.Content;
+
+            return request;
         }
 
         public class ProcessResult
