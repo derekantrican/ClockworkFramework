@@ -6,7 +6,7 @@ A basic automation framework for running tasks on an interval. Useful for things
 
 ### Getting started
 
-0. *Install .NET 6 if you do not have it installed already*
+0. *Install .NET 8 if you do not have it installed already*
 1. Clone the repo
 2. Run `dotnet build`
 3. Running the resulting executable will run the example tasks
