@@ -12,9 +12,23 @@ namespace ClockworkFramework
 
             while (true)
             {
-                DateTime now = DateTime.Now;
-                TimeSpan waitTime = interval.CalculateTimeToNext(now);
-                DateTime nextExecution = now + waitTime;
+                TimeSpan waitTime;
+                DateTime nextExecution;
+                try
+                {
+                    DateTime now = DateTime.Now;
+                    waitTime = interval.CalculateTimeToNext(now);
+                    nextExecution = now + waitTime;
+                }
+                catch (Exception ex)
+                {
+                    // If CalculateTimeToNext fails (e.g. due to an unexpected DST edge case),
+                    // log the error and retry after a short delay rather than permanently killing the task
+                    Console.WriteLine($"[{DateTime.Now}] Task '{taskMethod.Name}' failed to calculate next run time: {ex.Message}. Retrying in 60 seconds.");
+                    exceptionHandler?.Invoke(ex);
+                    await Task.Delay(TimeSpan.FromSeconds(60), cancellationToken);
+                    continue;
+                }
 
                 await Task.Delay(waitTime, cancellationToken);
 

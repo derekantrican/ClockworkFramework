@@ -76,39 +76,74 @@ namespace ClockworkFramework.Core
 
         public TimeSpan CalculateTimeToNext(DateTime fromDateTime)
         {
-            DateTime? next = null;
+            // For relative intervals (Second/Minute/Hour), do arithmetic in UTC to completely
+            // avoid DST issues. These intervals don't care about wall-clock time.
+            if (TimeType == TimeType.Second || TimeType == TimeType.Minute || TimeType == TimeType.Hour)
+            {
+                DateTime fromUtc = fromDateTime.Kind == DateTimeKind.Utc
+                    ? fromDateTime
+                    : fromDateTime.ToUniversalTime();
+
+                DateTime nextUtc = TimeType switch
+                {
+                    TimeType.Second => fromUtc.AddSeconds(Frequency),
+                    TimeType.Minute => fromUtc.AddMinutes(Frequency),
+                    TimeType.Hour => fromUtc.AddHours(Frequency),
+                    _ => throw new Exception("Unexpected TimeType"),
+                };
+
+                return nextUtc - fromUtc;
+            }
+
+            // For absolute intervals (Day/Week/Year), we need to calculate in local time
+            // (or the specified timezone) since the user wants "run at HH:MM local time".
+            TimeZoneInfo tz;
+            if (!string.IsNullOrEmpty(Timezone))
+            {
+                try
+                {
+                    tz = TimeZoneInfo.FindSystemTimeZoneById(Timezone); //I could use https://github.com/mattjohnsonpint/TimeZoneConverter to support IANA timezones
+                }
+                catch (TimeZoneNotFoundException)
+                {
+                    throw new Exception($"Unrecognized timezone '{Timezone}'");
+                }
+            }
+            else
+            {
+                tz = TimeZoneInfo.Local;
+            }
+
+            // Convert fromDateTime to the target timezone for accurate wall-clock calculations
+            DateTime fromUtcAbs = fromDateTime.Kind == DateTimeKind.Utc
+                ? fromDateTime
+                : fromDateTime.ToUniversalTime();
+            DateTime localNow = TimeZoneInfo.ConvertTimeFromUtc(fromUtcAbs, tz);
+
+            DateTime? nextLocal = null;
             switch (TimeType)
             {
-                case TimeType.Second:
-                    next = fromDateTime.AddSeconds(Frequency);
-                    break;
-                case TimeType.Minute:
-                    next = fromDateTime.AddMinutes(Frequency);
-                    break;
-                case TimeType.Hour:
-                    next = fromDateTime.AddHours(Frequency);
-                    break;
                 case TimeType.Day:
-                    next = fromDateTime;
-                    next = new DateTime(next.Value.Year, next.Value.Month, next.Value.Day, Hour, Minute, 0, 0);
+                    nextLocal = new DateTime(localNow.Year, localNow.Month, localNow.Day, Hour, Minute, 0, 0);
 
-                    if (Frequency != 1 || next < fromDateTime) //Only shift forward if the task repeats less frequently than everyday or the time has already passed
+                    if (Frequency != 1 || nextLocal <= localNow) //Only shift forward if the task repeats less frequently than everyday or the time has already passed
                     {
-                        next = next.Value.AddDays(Frequency);
+                        nextLocal = nextLocal.Value.AddDays(Frequency);
                     }
 
                     break;
                 case TimeType.Week:
-                    next = fromDateTime;
-                    next = new DateTime(next.Value.Year, next.Value.Month, next.Value.Day, Hour, Minute, 0, 0);
+                    nextLocal = new DateTime(localNow.Year, localNow.Month, localNow.Day, Hour, Minute, 0, 0);
 
-                    if (fromDateTime.DayOfWeek != DayOfWeek || next < fromDateTime) //Only shift forward if the DayOfWeek occurrence is not today or the time has already passed
+                    if (localNow.DayOfWeek != DayOfWeek || nextLocal <= localNow) //Only shift forward if the DayOfWeek occurrence is not today or the time has already passed
                     {
-                        next = fromDateTime.AddDays(((int)DayOfWeek - (int)fromDateTime.DayOfWeek + 7) % 7);
+                        int daysUntilTarget = ((int)DayOfWeek - (int)localNow.DayOfWeek + 7) % 7;
+                        if (daysUntilTarget == 0) daysUntilTarget = 7; // If same day but time passed, go to next week
+                        nextLocal = new DateTime(localNow.Year, localNow.Month, localNow.Day, Hour, Minute, 0, 0).AddDays(daysUntilTarget);
 
                         if (Frequency > 1)
                         {
-                            next = next.Value.AddDays(7 * Frequency);
+                            nextLocal = nextLocal.Value.AddDays(7 * (Frequency - 1));
                         }
                     }
 
@@ -117,44 +152,48 @@ namespace ClockworkFramework.Core
                     //Todo: not currently supported
                     break;
                 case TimeType.Year:
-                    next = fromDateTime;
-                    next = new DateTime(next.Value.Year, next.Value.Month, next.Value.Day, Hour, Minute, 0, 0);
+                    nextLocal = new DateTime(localNow.Year, localNow.Month, localNow.Day, Hour, Minute, 0, 0);
 
-                    if (next < fromDateTime) //Only shift forward if the time has already passed
+                    if (nextLocal <= localNow) //Only shift forward if the time has already passed
                     {
-                        next = fromDateTime.AddYears(Frequency);
+                        nextLocal = nextLocal.Value.AddYears(Frequency);
                     }
 
                     break;
             }
 
-            if (!next.HasValue)
+            if (!nextLocal.HasValue)
             {
                 throw new Exception("Unable to calculate next occurence");
             }
 
-            if (!string.IsNullOrEmpty(Timezone))
+            // Handle DST edge cases before converting to UTC:
+            // - "Invalid" times fall in the spring-forward gap (e.g. 2:30 AM when clocks skip 2:00->3:00)
+            // - "Ambiguous" times occur during fall-back (e.g. 1:30 AM happens twice)
+            if (tz.IsInvalidTime(nextLocal.Value))
             {
-                try
-                {
-                    //This is a rudimentary first version. Some potential problems that might arise,
-                    //causing this to provide inaccurate results:
-                    // - At the bottom, we attempt to account for DST changes, but by converting timezones,
-                    //   I wouldn't be surprised if there were multiple DST or similar changes in between
-                    // - Etc. (Timezones can be VERY weird. This could fail in a variety of ways)
+                // The target time doesn't exist — shift forward by the DST adjustment amount
+                // so we land just after the gap (e.g. 2:30 AM becomes 3:30 AM)
+                TimeSpan dstDelta = tz.GetAdjustmentRules()
+                    .Where(r => r.DateStart <= nextLocal.Value && r.DateEnd >= nextLocal.Value)
+                    .Select(r => r.DaylightDelta)
+                    .FirstOrDefault();
 
-                    TimeZoneInfo timeZoneInfo = TimeZoneInfo.FindSystemTimeZoneById(Timezone); //I could use https://github.com/mattjohnsonpint/TimeZoneConverter to support IANA timezones
+                if (dstDelta == TimeSpan.Zero)
+                    dstDelta = TimeSpan.FromHours(1); // Fallback: most DST transitions are 1 hour
 
-                    next = TimeZoneInfo.ConvertTime(next.Value, timeZoneInfo);
-                }
-                catch (TimeZoneNotFoundException)
-                {
-                    throw new Exception($"Unrecognized timezone '{Timezone}'");
-                }
+                nextLocal = nextLocal.Value.Add(dstDelta);
             }
 
-            //Using UTC converts here gives us the correct TimeSpan even if there is a DST change in between
-            return TimeZoneInfo.ConvertTimeToUtc(next.Value) - TimeZoneInfo.ConvertTimeToUtc(fromDateTime);
+            // For ambiguous times (fall-back), ConvertTimeToUtc defaults to standard time offset.
+            // This is acceptable — the task will run during the second occurrence of that wall-clock
+            // time, which is a reasonable behavior for a scheduler.
+
+            // Convert both times to UTC for an accurate TimeSpan regardless of DST transitions
+            DateTime nextUtcAbs = TimeZoneInfo.ConvertTimeToUtc(
+                DateTime.SpecifyKind(nextLocal.Value, DateTimeKind.Unspecified), tz);
+
+            return nextUtcAbs - fromUtcAbs;
         }
     }
 }
