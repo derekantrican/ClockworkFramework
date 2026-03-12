@@ -6,9 +6,13 @@ namespace ClockworkFramework
     public class TaskRunner
     {
         public static async Task RunTaskPeriodicAsync(IClockworkTaskBase taskBase, MethodInfo taskMethod, CancellationToken cancellationToken,
-            Action<Exception> exceptionHandler = null, Action<Exception> taskExceptionHandler = null)
+            Action<Exception> exceptionHandler = null, Action<Exception> taskExceptionHandler = null, Action<string> warningHandler = null)
         {
             Interval interval = (taskMethod.GetCustomAttribute(typeof(IntervalAttribute)) as IntervalAttribute).Interval;
+
+            // Read the MaxLateness attribute if present; default to 60 minutes if omitted
+            var maxLatenessAttr = taskMethod.GetCustomAttribute(typeof(MaxLatenessAttribute)) as MaxLatenessAttribute;
+            TimeSpan maxLateness = maxLatenessAttr?.MaxLateness ?? TimeSpan.FromMinutes(60);
 
             while (true)
             {
@@ -30,7 +34,33 @@ namespace ClockworkFramework
                     continue;
                 }
 
-                await Task.Delay(waitTime, cancellationToken);
+                // Instead of a single Task.Delay for the full wait (which doesn't tick during
+                // system sleep/hibernate, causing tasks to fire late after wake), we cap each
+                // delay at MaxDelayInterval and re-check the wall clock. This makes long waits
+                // resilient to sleep/hibernate/power outage scenarios.
+                TimeSpan MaxDelayInterval = TimeSpan.FromMinutes(1);
+                while (waitTime > MaxDelayInterval)
+                {
+                    await Task.Delay(MaxDelayInterval, cancellationToken);
+
+                    if (cancellationToken.IsCancellationRequested)
+                    {
+                        break;
+                    }
+
+                    // Recalculate from current wall-clock time to stay accurate after sleep/wake
+                    waitTime = nextExecution - DateTime.Now;
+                }
+
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    break;
+                }
+
+                if (waitTime > TimeSpan.Zero)
+                {
+                    await Task.Delay(waitTime, cancellationToken);
+                }
 
                 if (cancellationToken.IsCancellationRequested)
                 {
@@ -53,6 +83,22 @@ namespace ClockworkFramework
                     continue;
                 }
 
+                // Check if the task is late and warn/skip accordingly
+                TimeSpan lateness = DateTime.Now - nextExecution;
+                if (lateness > maxLateness)
+                {
+                    string skipMessage = $"Task '{taskMethod.Name}' skipped: {lateness.TotalMinutes:F1} min late exceeds max lateness of {(maxLateness == TimeSpan.MaxValue ? "unlimited" : $"{maxLateness.TotalMinutes:F0} min")}";
+                    Console.WriteLine($"[{DateTime.Now}] {skipMessage}");
+                    warningHandler?.Invoke(skipMessage);
+                    continue;
+                }
+                else if (lateness.TotalSeconds > 30) // Only warn if meaningfully late (not just minor scheduling jitter)
+                {
+                    string lateMessage = $"Task '{taskMethod.Name}' has started ({lateness.TotalMinutes:F1} min late)";
+                    Console.WriteLine($"[{DateTime.Now}] {lateMessage}");
+                    warningHandler?.Invoke(lateMessage);
+                }
+
                 await Task.Run(() =>
                 {
                     Utilities.RunWithCatch(() =>
@@ -63,7 +109,7 @@ namespace ClockworkFramework
                     },
                     ex => 
                     {
-                        Console.WriteLine($"[{DateTime.Now}] Task '{taskMethod.Name}' catch failed: ${ex.Message}\n{ex.StackTrace}");
+                        Console.WriteLine($"[{DateTime.Now}] Task '{taskMethod.Name}' catch failed: {ex.Message}\n{ex.StackTrace}");
                         exceptionHandler?.Invoke(ex);
                     });
                 });

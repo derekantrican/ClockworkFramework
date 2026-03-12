@@ -93,7 +93,9 @@ namespace ClockworkFramework
                 Console.WriteLine($"Found and registered task {task.TaskType.Name}.{task.TaskMethod.Name}");
                 
                 task.RunningTask = TaskRunner.RunTaskPeriodicAsync(task.Instance, task.TaskMethod, task.CancellationToken.Token,
-                    ex => CallHook(h => h.SystemExceptionHook(ex)), ex => CallHook(h => h.GlobalTaskExceptionHook(task.TaskType, task.TaskMethod, ex)));
+                    ex => CallHook(h => h.SystemExceptionHook(ex)), 
+                    ex => CallHook(h => h.GlobalTaskExceptionHook(task.TaskType, task.TaskMethod, ex)),
+                    msg => CallHook(h => h.Warning(msg)));
                 runningTasks.Add(task.RunningTask);
             }
 
