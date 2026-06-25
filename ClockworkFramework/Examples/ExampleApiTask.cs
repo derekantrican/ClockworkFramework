@@ -4,7 +4,6 @@ namespace ClockworkFramework.Examples
 {
     public class ExampleApiTask : IClockworkTaskBase
     {
-        [TaskMethod]
         [Interval(TimeType.Minute, 1)]
         public void Run()
         {

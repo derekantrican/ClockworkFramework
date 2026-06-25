@@ -8,7 +8,6 @@ namespace ClockworkFramework.Examples
         //or you can add Setup() or Teardown() methods that will be called on each run. Additionally,
         //you can implement the Catch(Exception e) method to handle exceptions.
 
-        [TaskMethod]
         [Interval(TimeType.Second, 10)]
         public void Run()
         {
